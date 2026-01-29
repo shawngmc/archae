@@ -67,7 +67,12 @@ archae --help
 
 <!-- end docs-include-usage -->
 
-# TODOs
+## Features
+- Uses 7z (not 7za/7zr) to try to extract archives
+- No substantial limit on the number of archive layers
+- Identifies file types via libmagic
+
+## TODOs
 
 - Protect against/detect archive bombs (malicious disk usage)
 - Improve archive type detection

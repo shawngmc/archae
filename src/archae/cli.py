@@ -1,6 +1,9 @@
 """Main CLI for archae."""
 
+import contextlib
 import hashlib
+import shutil
+import subprocess
 from importlib import metadata
 from pathlib import Path
 
@@ -25,24 +28,75 @@ def cli(archive_path: str) -> None:
 
     Archae explodes archives.
     """
-    start_examination(archive_path)
+    handle_file(archive_path)
+    debug_print_tracked_files()
 
 
 tracked_files: dict[str, dict] = {}
+base_dir = Path.cwd()
+extract_dir = base_dir / "extracted"
+if extract_dir.exists() and extract_dir.is_dir():
+    shutil.rmtree(extract_dir)
+extract_dir.mkdir(exist_ok=True)
 
 
-def start_examination(archive_path: str) -> None:
-    """Start the examination of an archive.
+def handle_file(file_path: str) -> None:
+    """Handle a file given its path.
 
     Args:
-        archive_path (str): The path to the archive.
+        file_path (str): The path to the file.
     """
-    click.echo(f"Starting examination of archive: {archive_path}")
-    base_hash = sha256_hash_file(archive_path)
+    click.echo(f"Starting examination of file: {file_path}")
+
+    base_hash = sha256_hash_file(file_path)
     track_file(base_hash)
-    track_file_path(base_hash, archive_path)
-    track_file_type(base_hash, magic.from_file(archive_path))
-    debug_print_tracked_files()
+    track_file_path(base_hash, file_path)
+    file_type = magic.from_file(file_path)
+    track_file_type(base_hash, file_type)
+    if "archive" in file_type:
+        extraction_dir = extract_archive(file_path, base_hash)
+        child_files = list_child_files(extraction_dir)
+        for child_file in child_files:
+            handle_file(str(child_file))
+
+
+def list_child_files(directory_path: str, pattern: str = "*") -> list[Path]:
+    """Recursively get a list of files matching a pattern in a directory.
+
+    Args:
+        directory_path (str): The starting directory path.
+        pattern (str): The file pattern to match (e.g., '*.txt', '*.py').
+
+    Returns:
+        list: A list of Path objects for the matching files.
+    """
+    p = Path(directory_path)
+    # rglob performs a recursive search
+    files = list(p.rglob(pattern))
+    # Optionally, filter out directories if pattern='*'
+    return [file for file in files if file.is_file()]
+
+
+def extract_archive(archive_path: str, hash: str) -> str:
+    """Extracts an archive to a specified directory.
+
+    Args:
+        archive_path (str): The path to the archive file.
+        hash (str): The hash of the archive file.
+
+    Returns:
+        str: The path to the extracted contents.
+    """
+    extracted_path = extract_dir / hash
+    seven_zip_path = shutil.which("7z")
+    if seven_zip_path is None:
+        msg = "7z command not found. Please install p7zip-full."
+        raise RuntimeError(msg)
+    with contextlib.suppress(FileNotFoundError):
+        command = [seven_zip_path, "x", archive_path, "-o" + str(extracted_path)]
+        subprocess.run(command, check=True)  # noqa: S603
+
+    return str(extracted_path)
 
 
 def sha256_hash_file(raw_path: str) -> str:
@@ -66,6 +120,7 @@ def sha256_hash_file(raw_path: str) -> str:
 
 def debug_print_tracked_files() -> None:
     """Print the tracked files for debugging purposes."""
+    click.echo("------------------------------------------------")
     for hash, info in tracked_files.items():
         click.echo(f"Hash: {hash}")
         for path in info.get("paths", []):

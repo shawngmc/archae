@@ -162,3 +162,5 @@ cython_debug/
 
 # Default test file
 hello.zip
+# Default extraction folder
+extracted/

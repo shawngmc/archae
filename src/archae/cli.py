@@ -6,6 +6,7 @@ import shutil
 import subprocess
 from importlib import metadata
 from pathlib import Path
+from typing import Any
 
 import magic
 import rich_click as click
@@ -53,7 +54,8 @@ def handle_file(file_path: Path) -> None:
     track_file(base_hash, file_size_bytes)
     track_file_path(base_hash, file_path)
     file_type = magic.from_file(file_path)
-    track_file_type(base_hash, file_type)
+    add_metadata_to_hash(base_hash, "type", file_type)
+    add_metadata_to_hash(base_hash, "type_mime", magic.from_file(file_path, mime=True))
     if "archive" in file_type:
         extraction_dir = extract_archive(file_path, base_hash)
         child_files = list_child_files(extraction_dir)
@@ -122,10 +124,12 @@ def debug_print_tracked_files() -> None:
     click.echo("------------------------------------------------")
     for hash, info in tracked_files.items():
         click.echo(f"Hash: {hash}")
+        click.echo(f"  Size: {info.get('size', 'Unknown')} bytes")
         for path in info.get("paths", []):
             click.echo(f"  Path: {path}")
-        click.echo(f"  Type: {info.get('type', 'Unknown')}")
-        click.echo(f"  Size: {info.get('size', 'Unknown')} bytes")
+        click.echo("  Metadata:")
+        for key, value in info.get("metadata", {}).items():
+            click.echo(f"    {key}: {value}")
 
 
 def track_file(hash: str, file_size_bytes: int) -> None:
@@ -138,6 +142,7 @@ def track_file(hash: str, file_size_bytes: int) -> None:
     if hash not in tracked_files:
         tracked_files[hash] = {}
         tracked_files[hash]["size"] = file_size_bytes
+        tracked_files[hash]["metadata"] = {}
     elif tracked_files[hash]["size"] != file_size_bytes:
         msg = f"Hash collision detected for hash {hash} with differing sizes."
         raise RuntimeError(msg)
@@ -166,11 +171,12 @@ def track_file_path(hash: str, file_path: Path) -> None:
         tracked_files[hash]["paths"].append(file_path)
 
 
-def track_file_type(hash: str, type: str) -> None:
-    """Add a type to a tracked file.
+def add_metadata_to_hash(hash: str, key: str, value: Any) -> None:
+    """Add metadata to a tracked file.
 
     Args:
         hash (str): The hash of the file.
-        type (str): The type of the file.
+        key (str): The metadata key.
+        value (Any): The metadata value.
     """
-    tracked_files[hash]["type"] = type
+    tracked_files[hash]["metadata"][key] = value

@@ -28,6 +28,7 @@ classifiers = [
 requires-python = "~=3.9"
 dependencies = [
     "click",
+    "python-magic",
     "rich_click",
 ]
 

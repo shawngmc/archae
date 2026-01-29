@@ -28,7 +28,7 @@ def cli(archive_path: str) -> None:
 
     Archae explodes archives.
     """
-    handle_file(archive_path)
+    handle_file(Path(archive_path))
     debug_print_tracked_files()
 
 
@@ -40,16 +40,17 @@ if extract_dir.exists() and extract_dir.is_dir():
 extract_dir.mkdir(exist_ok=True)
 
 
-def handle_file(file_path: str) -> None:
+def handle_file(file_path: Path) -> None:
     """Handle a file given its path.
 
     Args:
-        file_path (str): The path to the file.
+        file_path (Path): The path to the file.
     """
-    click.echo(f"Starting examination of file: {file_path}")
+    click.echo(f"Starting examination of file: {file_path!s}")
 
     base_hash = sha256_hash_file(file_path)
-    track_file(base_hash)
+    file_size_bytes = file_path.stat().st_size
+    track_file(base_hash, file_size_bytes)
     track_file_path(base_hash, file_path)
     file_type = magic.from_file(file_path)
     track_file_type(base_hash, file_type)
@@ -57,35 +58,34 @@ def handle_file(file_path: str) -> None:
         extraction_dir = extract_archive(file_path, base_hash)
         child_files = list_child_files(extraction_dir)
         for child_file in child_files:
-            handle_file(str(child_file))
+            handle_file(child_file)
 
 
-def list_child_files(directory_path: str, pattern: str = "*") -> list[Path]:
+def list_child_files(directory_path: Path, pattern: str = "*") -> list[Path]:
     """Recursively get a list of files matching a pattern in a directory.
 
     Args:
-        directory_path (str): The starting directory path.
+        directory_path (Path): The starting directory path.
         pattern (str): The file pattern to match (e.g., '*.txt', '*.py').
 
     Returns:
         list: A list of Path objects for the matching files.
     """
-    p = Path(directory_path)
     # rglob performs a recursive search
-    files = list(p.rglob(pattern))
+    files = list(directory_path.rglob(pattern))
     # Optionally, filter out directories if pattern='*'
     return [file for file in files if file.is_file()]
 
 
-def extract_archive(archive_path: str, hash: str) -> str:
+def extract_archive(archive_path: Path, hash: str) -> Path:
     """Extracts an archive to a specified directory.
 
     Args:
-        archive_path (str): The path to the archive file.
+        archive_path (Path): The path to the archive file.
         hash (str): The hash of the archive file.
 
     Returns:
-        str: The path to the extracted contents.
+        Path: The path to the extracted contents.
     """
     extracted_path = extract_dir / hash
     seven_zip_path = shutil.which("7z")
@@ -93,23 +93,22 @@ def extract_archive(archive_path: str, hash: str) -> str:
         msg = "7z command not found. Please install p7zip-full."
         raise RuntimeError(msg)
     with contextlib.suppress(FileNotFoundError):
-        command = [seven_zip_path, "x", archive_path, "-o" + str(extracted_path)]
+        command = [seven_zip_path, "x", str(archive_path), "-o" + str(extracted_path)]
         subprocess.run(command, check=True)  # noqa: S603
 
-    return str(extracted_path)
+    return extracted_path
 
 
-def sha256_hash_file(raw_path: str) -> str:
+def sha256_hash_file(file_path: Path) -> str:
     """Computes the SHA-256 hash of a file.
 
     Args:
-        raw_path (str): The path to the file.
+        file_path (Path): The path to the file.
 
     Returns:
         str: The SHA-256 hash of the file in hexadecimal format.
     """
     try:
-        file_path = Path(raw_path)
         with file_path.open("rb") as f:
             # Use hashlib.file_digest for simplicity and efficiency in Python 3.11+
             digest = hashlib.file_digest(f, "sha256")
@@ -126,16 +125,22 @@ def debug_print_tracked_files() -> None:
         for path in info.get("paths", []):
             click.echo(f"  Path: {path}")
         click.echo(f"  Type: {info.get('type', 'Unknown')}")
+        click.echo(f"  Size: {info.get('size', 'Unknown')} bytes")
 
 
-def track_file(hash: str) -> None:
+def track_file(hash: str, file_size_bytes: int) -> None:
     """Track a file by its hash.
 
     Args:
         hash (str): The hash of the file to track.
+        file_size_bytes (int): The size of the file in bytes.
     """
     if hash not in tracked_files:
         tracked_files[hash] = {}
+        tracked_files[hash]["size"] = file_size_bytes
+    elif tracked_files[hash]["size"] != file_size_bytes:
+        msg = f"Hash collision detected for hash {hash} with differing sizes."
+        raise RuntimeError(msg)
 
 
 def is_file_tracked(hash: str) -> bool:
@@ -147,18 +152,18 @@ def is_file_tracked(hash: str) -> bool:
     return hash in tracked_files
 
 
-def track_file_path(hash: str, path: str) -> None:
+def track_file_path(hash: str, file_path: Path) -> None:
     """Track a file path by its hash.
 
     Args:
         hash (str): The hash of the file.
-        path (str): The path to track.
+        file_path (Path): The path to track.
     """
     if "paths" not in tracked_files[hash]:
         tracked_files[hash]["paths"] = []
 
-    if path not in tracked_files[hash]["paths"]:
-        tracked_files[hash]["paths"].append(path)
+    if file_path not in tracked_files[hash]["paths"]:
+        tracked_files[hash]["paths"].append(file_path)
 
 
 def track_file_type(hash: str, type: str) -> None:

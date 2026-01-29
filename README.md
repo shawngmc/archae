@@ -66,3 +66,13 @@ archae --help
 <!-- [[[end]]] -->
 
 <!-- end docs-include-usage -->
+
+# TODOs
+
+- Protect against/detect archive bombs (malicious disk usage)
+- Improve archive type detection
+- Separate between extractable and non-extractable archive types
+- Protect against/detect depth attacks (excessively nested archives)
+- Detect password-protected archives
+- Allow supplying archive passwords by hash
+- Add custom magic to detect obscure archive formats

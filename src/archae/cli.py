@@ -1,5 +1,7 @@
 """Main CLI for archae."""
 
+from __future__ import annotations
+
 import contextlib
 import hashlib
 import shutil
@@ -10,6 +12,380 @@ from typing import Any
 
 import magic
 import rich_click as click
+
+tool_names = [
+    "7z",
+    "pea",
+    "unar",
+]
+
+mime_types_7z = [
+    "application/x-7z-compressed",
+    "application/vnd.android.package-archive",
+    "application/x-bzip2",
+    "application/x-chrome-extension",
+    "application/x-xpinstall",
+    "application/vnd.debian.binary-package",
+    "application/gzip",
+    "application/java-archive",
+    "application/x-lzma",
+    "application/vnd.ms-cab-compressed",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/msix",
+    "application/appinstaller",
+    "application/appx",
+    "application/appxbundle",
+    "application/msixbundle",
+    "application/x-compress",
+    "application/x-tar",
+    "application/zip",
+    "application/x-apple-diskimage",
+    "application/x-arj",
+    "application/x-cpio",
+    "application/vnd.efi.img",
+    "application/x-alz-compressed",
+    "application/x-xar",
+    "application/x-iso9660-image",
+    "application/x-lzh",
+    "application/vnd.ms-htmlhelp",
+    "application/x-ole-storage",
+    "application/x-vhd",
+    "text/x-nsis",
+    "application/x-qemu-disk",
+    "application/x-rpm",
+    "application/x-rar-compressed",
+    "application/vnd.squashfs",
+    "application/x-archive",
+    "application/x-virtualbox-vdi",
+    "application/x-vmdk-disk",
+    "application/x-ms-wim",
+    "application/x-xz",
+]
+
+extensions_7z = [
+    "7z",
+    "s7z",
+    "apk",
+    "bz2",
+    "tbz2",
+    "crx",
+    "xpi",
+    "deb",
+    "gz",
+    "tgz",
+    "ipa",
+    "jar",
+    "ear",
+    "war",
+    "lzma",
+    "cab",
+    "docx",
+    "docm",
+    "pptx",
+    "pptm",
+    "xlsx",
+    "xlsm",
+    "emsix",
+    "emsixbundle",
+    "msix",
+    "appinstaller",
+    "appx",
+    "appxbundle",
+    "msixbundle",
+    "z",
+    "taz",
+    "tar",
+    "zip",
+    "zipx",
+    "appimage",
+    "dmg ",
+    "img",
+    "arj",
+    "cpio",
+    "cramfs",
+    "raw",
+    "alz",
+    "ext",
+    "ext2",
+    "ext3",
+    "ext4",
+    "xar",
+    "pkg",
+    "fat",
+    "gpt",
+    "hfs",
+    "hfsx",
+    "iso",
+    "lha",
+    "lhz",
+    "mbr",
+    "chm",
+    "chw",
+    "chi",
+    "chq",
+    "msi",
+    "msp",
+    "vhd",
+    "vhdx",
+    "ntfs",
+    "nsi",
+    "exe",
+    "nsis",
+    "qcow2",
+    "qcow",
+    "qcow2c",
+    "rpm",
+    "rar",
+    "r00",
+    "sqfs",
+    "sfs",
+    "sqsh",
+    "squashfs",
+    "scap",
+    "uefif",
+    "udf",
+    "edb",
+    "edp",
+    "edr",
+    "a",
+    "ar",
+    "deb",
+    "lib",
+    "vdi",
+    "vmdk",
+    "wim",
+    "swm",
+    "esd",
+    "xz",
+    "txz",
+]
+
+mime_types_pea = [
+    "application/appinstaller",
+    "application/appx",
+    "application/appxbundle",
+    "application/gzip",
+    "application/java-archive",
+    "application/msix",
+    "application/msixbundle",
+    "application/vnd.android.package-archive",
+    "application/vnd.debian.binary-package",
+    "application/vnd.ms-cab-compressed",
+    "application/vnd.ms-htmlhelp",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/x-7z-compressed",
+    "application/x-ace-compressed",
+    "application/x-apple-diskimage",
+    "application/x-arc",
+    "application/x-arj",
+    "application/x-brotli",
+    "application/x-bzip2",
+    "application/x-chrome-extension",
+    "application/x-compress",
+    "application/x-cpio",
+    "application/x-freearc",
+    "application/x-iso9660-image",
+    "application/x-lzma",
+    "application/x-ms-wim",
+    "application/x-ole-storage",
+    "application/x-rar-compressed",
+    "application/x-rpm",
+    "application/x-tar",
+    "application/x-vhd",
+    "application/x-xar",
+    "application/x-xpinstall",
+    "application/x-xz",
+    "application/zip",
+    "application/zip",
+    "application/zip",
+    "application/zstd",
+]
+
+extensions_pea = [
+    "appinstaller",
+    "appx",
+    "appxbundle",
+    "gz",
+    "tgz",
+    "jar",
+    "ear",
+    "war",
+    "emsix",
+    "emsixbundle",
+    "msix",
+    "msixbundle",
+    "apk",
+    "deb",
+    "cab",
+    "chm",
+    "chw",
+    "chi",
+    "chq",
+    "pptx",
+    "pptm ",
+    "xlsx",
+    "xlsm",
+    "docx",
+    "docm",
+    "7z",
+    "s7z",
+    "ace",
+    "dmg",
+    "img",
+    "arc",
+    "pak",
+    "arj",
+    "br",
+    "bz2",
+    "tbz2",
+    "crx",
+    "z",
+    "taz",
+    "cpio",
+    "arc",
+    "pak",
+    "iso",
+    "img",
+    "lzma",
+    "wim",
+    "swm",
+    "esd",
+    "msi",
+    "msp",
+    "rar",
+    "r00",
+    "rpm",
+    "tar",
+    "vhd",
+    "vhdx",
+    "xar",
+    "pkg",
+    "xpi",
+    "xz",
+    "txz",
+    "ipa",
+    "zip",
+    "zipx",
+    "aar",
+    "zst",
+]
+
+mime_types_unar = [
+    "application/appinstaller",
+    "application/appx",
+    "application/appxbundle",
+    "application/gzip",
+    "application/msix",
+    "application/msixbundle",
+    "application/vnd.android.package-archive",
+    "application/vnd.debian.binary-package",
+    "application/vnd.ms-cab-compressed",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/x-7z-compressed",
+    "application/x-ace-compressed",
+    "application/x-alz-compressed",
+    "application/x-arc",
+    "application/x-archive",
+    "application/x-arj",
+    "application/x-bzip2",
+    "application/x-chrome-extension",
+    "application/x-compress",
+    "application/x-cpio",
+    "application/x-freearc",
+    "application/x-iso9660-image",
+    "application/x-lzh",
+    "application/x-lzma",
+    "application/x-ole-storage",
+    "application/x-rar-compressed",
+    "application/x-stuffit",
+    "application/x-sit",
+    "application/x-stuffitx",
+    "application/x-sitx",
+    "application/x-tar",
+    "application/x-xar",
+    "application/x-xpinstall",
+    "application/x-xz",
+    "application/x-zoo",
+    "application/zip",
+    "application/zip",
+    "text/x-nsis",
+]
+
+extensions_unar = [
+    "appinstaller",
+    "appx",
+    "appxbundle",
+    "gz",
+    "tgz",
+    "emsix",
+    "emsixbundle",
+    "msix",
+    "msixbundle",
+    "apk",
+    "deb",
+    "cab",
+    "pptx",
+    "pptm ",
+    "xlsx ",
+    "xlsm",
+    "docx",
+    "docm",
+    "7z",
+    "s7z",
+    "ace",
+    "alz",
+    "arc",
+    "pak",
+    "a",
+    "ar",
+    "deb",
+    "lib",
+    "arj",
+    "bz2",
+    "tbz2",
+    "crx",
+    "z",
+    "taz",
+    "cpio",
+    "arc",
+    "pak",
+    "iso",
+    "img",
+    "lha",
+    "lhz",
+    "lzma",
+    "msi",
+    "msp",
+    "rar",
+    "r00",
+    "sit",
+    "sitx",
+    "tar",
+    "xar",
+    "pkg",
+    "xpi",
+    "xz",
+    "txz",
+    "zoo",
+    "zip",
+    "zipx",
+    "aar",
+    "nsi",
+    "exe",
+    "nsis",
+    "udf",
+    "edb",
+    "edp",
+    "edr",
+]
+
+tools = {}
 
 
 @click.command(
@@ -29,6 +405,7 @@ def cli(archive_path: str) -> None:
 
     Archae explodes archives.
     """
+    locate_tools()
     handle_file(Path(archive_path))
     debug_print_tracked_files()
 
@@ -39,6 +416,15 @@ extract_dir = base_dir / "extracted"
 if extract_dir.exists() and extract_dir.is_dir():
     shutil.rmtree(extract_dir)
 extract_dir.mkdir(exist_ok=True)
+
+
+def locate_tools() -> None:
+    """Locate required external tools."""
+    for tool_name in tool_names:
+        tool_path = shutil.which(tool_name)
+        if tool_path is None:
+            pass
+        tools[tool_name] = tool_path
 
 
 def handle_file(file_path: Path) -> None:
@@ -53,14 +439,40 @@ def handle_file(file_path: Path) -> None:
     file_size_bytes = file_path.stat().st_size
     track_file(base_hash, file_size_bytes)
     track_file_path(base_hash, file_path)
-    file_type = magic.from_file(file_path)
-    add_metadata_to_hash(base_hash, "type", file_type)
+    add_metadata_to_hash(base_hash, "type", magic.from_file(file_path))
     add_metadata_to_hash(base_hash, "type_mime", magic.from_file(file_path, mime=True))
-    if "archive" in file_type:
-        extraction_dir = extract_archive(file_path, base_hash)
+    extension = file_path.suffix.lstrip(".").lower()
+    add_metadata_to_hash(base_hash, "extension", extension)
+    archiver = get_archiver_for_file(base_hash)
+    if archiver:
+        extraction_dir = extract_archive(file_path, base_hash, archiver)
         child_files = list_child_files(extraction_dir)
         for child_file in child_files:
             handle_file(child_file)
+
+
+def get_archiver_for_file(hash: str) -> str | None:
+    """Determine the appropriate archiver for a file based on its metadata.
+
+    Args:
+        hash (str): The hash of the file.
+
+    Returns:
+        str | None: The name of the archiver tool if found, otherwise None.
+    """
+    metadata = get_tracked_file_metadata(hash)
+    mime_type = metadata.get("type_mime", "").lower()
+    extension = metadata.get("extension", "").lower()
+
+    if "7z" in tools and (mime_type in mime_types_7z or extension in extensions_7z):
+        return tools.get("7z")
+    if "pea" in tools and (mime_type in mime_types_pea or extension in extensions_pea):
+        return tools.get("pea")
+    if "unar" in tools and (
+        mime_type in mime_types_unar or extension in extensions_unar
+    ):
+        return tools.get("unar")
+    return None
 
 
 def list_child_files(directory_path: Path, pattern: str = "*") -> list[Path]:
@@ -79,23 +491,20 @@ def list_child_files(directory_path: Path, pattern: str = "*") -> list[Path]:
     return [file for file in files if file.is_file()]
 
 
-def extract_archive(archive_path: Path, hash: str) -> Path:
+def extract_archive(archive_path: Path, hash: str, archiver: str) -> Path:
     """Extracts an archive to a specified directory.
 
     Args:
         archive_path (Path): The path to the archive file.
         hash (str): The hash of the archive file.
+        archiver (str): The archiver tool to use for extraction.
 
     Returns:
         Path: The path to the extracted contents.
     """
     extracted_path = extract_dir / hash
-    seven_zip_path = shutil.which("7z")
-    if seven_zip_path is None:
-        msg = "7z command not found. Please install p7zip-full."
-        raise RuntimeError(msg)
     with contextlib.suppress(FileNotFoundError):
-        command = [seven_zip_path, "x", str(archive_path), "-o" + str(extracted_path)]
+        command = [archiver, "x", str(archive_path), "-o" + str(extracted_path)]
         subprocess.run(command, check=True)  # noqa: S603
 
     return extracted_path
@@ -155,6 +564,18 @@ def is_file_tracked(hash: str) -> bool:
         hash (str): The hash of the file to check.
     """
     return hash in tracked_files
+
+
+def get_tracked_file_metadata(hash: str) -> dict:
+    """Get metadata for a tracked file by its hash.
+
+    Args:
+        hash (str): The hash of the file.
+
+    Returns:
+        dict: The metadata of the tracked file.
+    """
+    return tracked_files.get(hash, {}).get("metadata", {})
 
 
 def track_file_path(hash: str, file_path: Path) -> None:

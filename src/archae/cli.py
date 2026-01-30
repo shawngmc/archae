@@ -443,12 +443,41 @@ def handle_file(file_path: Path) -> None:
     add_metadata_to_hash(base_hash, "type_mime", magic.from_file(file_path, mime=True))
     extension = file_path.suffix.lstrip(".").lower()
     add_metadata_to_hash(base_hash, "extension", extension)
-    archiver = get_archiver_for_file(base_hash)
-    if archiver:
-        extraction_dir = extract_archive(file_path, base_hash, archiver)
-        child_files = list_child_files(extraction_dir)
-        for child_file in child_files:
-            handle_file(child_file)
+    is_file_archive = is_archive(base_hash)
+    add_metadata_to_hash(base_hash, "is_archive", is_file_archive)
+    if is_file_archive:
+        archiver = get_archiver_for_file(base_hash)
+        if archiver:
+            extraction_dir = extract_archive(file_path, base_hash, archiver)
+            child_files = list_child_files(extraction_dir)
+            for child_file in child_files:
+                handle_file(child_file)
+        else:
+            click.echo(f"No suitable archiver found for file: {file_path!s}")
+
+
+def is_archive(hash: str) -> bool:
+    """Determine the appropriate archiver for a file based on its metadata.
+
+    Args:
+        hash (str): The hash of the file.
+
+    Returns:
+        bool: True if the file is an archive, otherwise False.
+
+    """
+    metadata = get_tracked_file_metadata(hash)
+    mime_type = metadata.get("type_mime", "").lower()
+    extension = metadata.get("extension", "").lower()
+
+    for mime_type_list in [mime_types_7z, mime_types_pea, mime_types_unar]:
+        if mime_type in mime_type_list:
+            return True
+    for extension_list in [extensions_7z, extensions_pea, extensions_unar]:
+        if extension in extension_list:
+            return True
+
+    return False
 
 
 def get_archiver_for_file(hash: str) -> str | None:
@@ -465,13 +494,13 @@ def get_archiver_for_file(hash: str) -> str | None:
     extension = metadata.get("extension", "").lower()
 
     if "7z" in tools and (mime_type in mime_types_7z or extension in extensions_7z):
-        return tools.get("7z")
+        return "7z"
     if "pea" in tools and (mime_type in mime_types_pea or extension in extensions_pea):
-        return tools.get("pea")
+        return "pea"
     if "unar" in tools and (
         mime_type in mime_types_unar or extension in extensions_unar
     ):
-        return tools.get("unar")
+        return "unar"
     return None
 
 
@@ -503,9 +532,28 @@ def extract_archive(archive_path: Path, hash: str, archiver: str) -> Path:
         Path: The path to the extracted contents.
     """
     extracted_path = extract_dir / hash
-    with contextlib.suppress(FileNotFoundError):
-        command = [archiver, "x", str(archive_path), "-o" + str(extracted_path)]
-        subprocess.run(command, check=True)  # noqa: S603
+    command: list[str] = []
+    archiver_tool: str | None = tools[archiver]
+    if archiver_tool is not None:
+        if archiver == "7z":
+            command = [archiver_tool, "x", str(archive_path), f"-o{extracted_path!s}"]
+        elif archiver == "peazip":
+            command = [
+                archiver_tool,
+                "-ext2simple",
+                str(archive_path),
+                str(extracted_path),
+            ]
+        elif archiver == "unar":
+            command = [archiver_tool, "-o", str(extracted_path), str(archive_path)]
+
+        if command:
+            with contextlib.suppress(FileNotFoundError):
+                subprocess.run(command, check=True)  # noqa: S603
+    else:
+        click.echo(
+            f"No extraction command for archiver: {archiver}; this generally shouldn't happen!"
+        )
 
     return extracted_path
 

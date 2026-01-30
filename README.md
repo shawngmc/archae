@@ -68,7 +68,8 @@ archae --help
 <!-- end docs-include-usage -->
 
 ## Features
-- Uses 7z (not 7za/7zr) to try to extract archives
+
+- Uses 7z/peazip/unar (not 7za/7zr) to try to extract archives
 - No substantial limit on the number of archive layers
 - Identifies file types via libmagic
 

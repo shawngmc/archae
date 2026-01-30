@@ -546,6 +546,10 @@ def extract_archive(archive_path: Path, hash: str, archiver: str) -> Path:
             ]
         elif archiver == "unar":
             command = [archiver_tool, "-o", str(extracted_path), str(archive_path)]
+        else:
+            click.echo(
+                f"Unsupported archiver: {archiver}; this generally shouldn't happen!"
+            )
 
         if command:
             with contextlib.suppress(FileNotFoundError):

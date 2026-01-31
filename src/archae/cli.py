@@ -422,9 +422,14 @@ class ByteScale(Enum):
         return obj
 
     @property
-    def get_prefix_letter(self):
+    def prefix_letter(self) -> str:
         """Return the prefix letter for this scale."""
-        return self.prefix_letter
+        return self._prefix_letter
+
+    @prefix_letter.setter
+    def prefix_letter(self, value: str) -> None:
+        """Setter for prefix letter."""
+        self._prefix_letter = value
 
 
 class FileSizeParamType(click.ParamType):
@@ -450,7 +455,7 @@ class FileSizeParamType(click.ParamType):
             if modulo == 0:
                 exponent += 1
                 value = int(value / 1024)
-        return f"{value}{ByteScale(exponent).get_prefix_letter}"
+        return f"{value}{ByteScale(exponent).prefix_letter}"  # type: ignore[call-arg]
 
     @staticmethod
     def expand_value(value: str | int) -> int:
@@ -464,8 +469,7 @@ class FileSizeParamType(click.ParamType):
 
         """
         try:
-            result = int(value)
-            return result
+            return int(value)
         except ValueError:
             pass
 
@@ -762,16 +766,13 @@ def get_archive_extracted_size(archive_path: Path, hash: str, archiver: str) -> 
             )
 
         if command:
-            with contextlib.suppress(FileNotFoundError):
-                result = subprocess.run(
-                    command, check=True, capture_output=True, text=True
-                )
+            result = subprocess.run(command, check=True, capture_output=True, text=True)  # noqa: S603
 
-                result_lines = str(result.stdout).splitlines()
-                exploded_size = 0
-                for line in result_lines:
-                    if line.startswith("Size = "):
-                        exploded_size += int(line[7:])
+            result_lines = str(result.stdout).splitlines()
+            exploded_size = 0
+            for line in result_lines:
+                if line.startswith("Size = "):
+                    exploded_size += int(line[7:])
 
     else:
         click.echo(

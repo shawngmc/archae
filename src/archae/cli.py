@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 import contextlib
+import copy
 import hashlib
+import re
 import shutil
 import subprocess
+from enum import Enum
 from importlib import metadata
 from pathlib import Path
 from typing import Any
-import re
-import copy
-from enum import Enum
 
 import magic
 import rich_click as click
@@ -399,10 +399,9 @@ class ByteScale(Enum):
     GIGA = (3, "G")
     TERA = (4, "T")
     PETA = (5, "P")
-    
+
     def __new__(cls, exponent, prefix_letter):
-        """
-        __new__ is used to control how new enum members are instantiated.
+        """__new__ is used to control how new enum members are instantiated.
         It must set the `_value_` attribute and any custom attributes.
         """
         obj = object.__new__(cls)
@@ -411,18 +410,19 @@ class ByteScale(Enum):
         return obj
 
     @property
-    def set_prefix_letter(self):
+    def set_prefix_letter(self) -> None:
         obj.prefix_letter = prefix_letter
 
     @property
     def get_prefix_letter(self):
         return self.prefix_letter
 
+
 class FileSizeParamType(click.ParamType):
     name = "filesize"
 
     @staticmethod
-    def compact_value(value):
+    def compact_value(value) -> str:
         exponent = 0
         modulo = 0
         while modulo == 0 and exponent < 4:
@@ -431,8 +431,7 @@ class FileSizeParamType(click.ParamType):
                 exponent += 1
                 value = int(value / 1024)
         return f"{value}{ByteScale(exponent).get_prefix_letter}"
-            
-    
+
     @staticmethod
     def expand_value(value):
         try:
@@ -441,25 +440,26 @@ class FileSizeParamType(click.ParamType):
             pass
 
         # Regex to split number and unit
-        match = re.match(r'^(\d+(?:\.\d+)?)\s*([KMGT]B?)$', value, re.IGNORECASE)
+        match = re.match(r"^(\d+(?:\.\d+)?)\s*([KMGT]B?)$", value, re.IGNORECASE)
         if not match:
-            raise ValueError(f"{value} is not a valid file size (e.g., 10G, 500M)")
-        
+            msg = f"{value} is not a valid file size (e.g., 10G, 500M)"
+            raise ValueError(msg)
+
         number, unit = match.groups()
         number = float(number)
         unit = unit.upper()
 
         units = {
-            'K': 1024,
-            'KB': 1024,
-            'M': 1024**2,
-            'MB': 1024**2,
-            'G': 1024**3,
-            'GB': 1024**3,
-            'T': 1024**4,
-            'TB': 1024**4,
+            "K": 1024,
+            "KB": 1024,
+            "M": 1024**2,
+            "MB": 1024**2,
+            "G": 1024**3,
+            "GB": 1024**3,
+            "T": 1024**4,
+            "TB": 1024**4,
         }
-        
+
         # Default to bytes if no specific unit multiplier, or assume B
         return int(number * units.get(unit, 1))
 
@@ -469,13 +469,15 @@ class FileSizeParamType(click.ParamType):
         except ValueError as err:
             self.fail(str(err), param, ctx)
 
+
 defaults = {
     "max_total_size_bytes": FileSizeParamType.expand_value("100G"),
     "max_archive_size_bytes": FileSizeParamType.expand_value("10G"),
-    "min-archive_ratio": 0.005
+    "min-archive_ratio": 0.005,
 }
 
 config = copy.deepcopy(defaults)
+
 
 @click.command(
     context_settings={"help_option_names": ["-h", "--help"], "show_default": True}
@@ -487,16 +489,35 @@ config = copy.deepcopy(defaults)
         use_rich_markup=True,
     ),
 )
-@click.argument("archive_path", type=click.Path(exists=True, dir_okay=False), help="Archive to examine")
-@click.option("--max_total_size_bytes", type=FileSizeParamType(), default=defaults["max_total_size_bytes"], help=f"Maximum total extraction size before failing, default {FileSizeParamType.compact_value(defaults['max_total_size_bytes'])}")
-@click.option("--max_archive_size_bytes", type=FileSizeParamType(), default=defaults["max_archive_size_bytes"], help=f"Maximum individual archive extraction size before failing, default {FileSizeParamType.compact_value(defaults['max_archive_size_bytes'])}")
+@click.argument(
+    "archive_path",
+    type=click.Path(exists=True, dir_okay=False),
+    help="Archive to examine",
+)
 @click.option(
-    '--min_archive_ratio',
+    "--max_total_size_bytes",
+    type=FileSizeParamType(),
+    default=defaults["max_total_size_bytes"],
+    help=f"Maximum total extraction size before failing, default {FileSizeParamType.compact_value(defaults['max_total_size_bytes'])}",
+)
+@click.option(
+    "--max_archive_size_bytes",
+    type=FileSizeParamType(),
+    default=defaults["max_archive_size_bytes"],
+    help=f"Maximum individual archive extraction size before failing, default {FileSizeParamType.compact_value(defaults['max_archive_size_bytes'])}",
+)
+@click.option(
+    "--min_archive_ratio",
     type=click.FloatRange(0, 1),
-    help='Minimum allowed compression ratio for an archive. A floating-point value between 0.0 and 1.0, inclusive. Default is 0.005'
+    help="Minimum allowed compression ratio for an archive. A floating-point value between 0.0 and 1.0, inclusive. Default is 0.005",
 )
 @click.version_option(metadata.version("archae"), "-v", "--version")
-def cli(archive_path: str, max_total_size_bytes: int, max_archive_size_bytes: int, min_archive_ratio: float) -> None:
+def cli(
+    archive_path: str,
+    max_total_size_bytes: int,
+    max_archive_size_bytes: int,
+    min_archive_ratio: float,
+) -> None:
     """Archae explodes archives."""
     locate_tools()
     config["max_total_size_bytes"] = max_total_size_bytes
@@ -513,29 +534,20 @@ if extract_dir.exists() and extract_dir.is_dir():
     shutil.rmtree(extract_dir)
 extract_dir.mkdir(exist_ok=True)
 
+
 def convert_size_arg(self, value, param, ctx):
     if isinstance(value, int):
         return value
-    
+
     # Regex to split number and unit
-    match = re.match(r'^(\d+(?:\.\d+)?)\s*([KMGT]B?)$', value, re.IGNORECASE)
+    match = re.match(r"^(\d+(?:\.\d+)?)\s*([KMGT]B?)$", value, re.IGNORECASE)
     if not match:
         self.fail(f"{value} is not a valid file size (e.g., 10G, 500M)", param, ctx)
-    
+
     number, unit = match.groups()
     number = float(number)
     unit = unit.upper()
-
-    units = {
-        'K': 1024,
-        'KB': 1024,
-        'M': 1024**2,
-        'MB': 1024**2,
-        'G': 1024**3,
-        'GB': 1024**3,
-        'T': 1024**4,
-        'TB': 1024**4,
-    }
+    return None
 
 
 def locate_tools() -> None:
@@ -571,11 +583,17 @@ def handle_file(file_path: Path) -> None:
             extracted_size = get_archive_extracted_size(file_path, base_hash, archiver)
             add_metadata_to_hash(base_hash, "extracted_size", extracted_size)
             compression_ratio = extracted_size / file_size_bytes
-            add_metadata_to_hash(base_hash, "overall_compression_ratio", compression_ratio)
+            add_metadata_to_hash(
+                base_hash, "overall_compression_ratio", compression_ratio
+            )
             if extracted_size > config["max_archive_size_bytes"]:
-                click.echo(f"Skipped archive {file_path} because expected size {extracted_size} is greater than max_archive_size_bytes {config["max_archive_size_bytes"]}")
+                click.echo(
+                    f"Skipped archive {file_path} because expected size {extracted_size} is greater than max_archive_size_bytes {config['max_archive_size_bytes']}"
+                )
             elif compression_ratio < config["min_archive_ratio"]:
-                click.echo(f"Skipped archive {file_path} because compression ratio {compression_ratio:.5f} is less than min_archive_ratio {config["min_archive_ratio"]}")
+                click.echo(
+                    f"Skipped archive {file_path} because compression ratio {compression_ratio:.5f} is less than min_archive_ratio {config['min_archive_ratio']}"
+                )
             else:
                 extraction_dir = extract_archive(file_path, base_hash, archiver)
                 child_files = list_child_files(extraction_dir)
@@ -692,7 +710,7 @@ def extract_archive(archive_path: Path, hash: str, archiver: str) -> Path:
 
 
 def get_archive_extracted_size(archive_path: Path, hash: str, archiver: str) -> int:
-    """Get the uncompressed size of the contents
+    """Get the uncompressed size of the contents.
 
     Args:
         archive_path (Path): The path to the archive file.
@@ -708,14 +726,8 @@ def get_archive_extracted_size(archive_path: Path, hash: str, archiver: str) -> 
     if archiver_tool is not None:
         if archiver == "7z":
             command = [archiver_tool, "l", "-slt", str(archive_path)]
-        elif archiver == "peazip":
-            click.echo(
-                f"{archiver} size testing not yet implemented!"
-            )
-        elif archiver == "unar":
-            click.echo(
-                f"{archiver} size testing not yet implemented!"
-            )
+        elif archiver in {"peazip", "unar"}:
+            click.echo(f"{archiver} size testing not yet implemented!")
         else:
             click.echo(
                 f"Unsupported archiver: {archiver}; this generally shouldn't happen!"
@@ -723,8 +735,10 @@ def get_archive_extracted_size(archive_path: Path, hash: str, archiver: str) -> 
 
         if command:
             with contextlib.suppress(FileNotFoundError):
-                result = subprocess.run(command, check=True, capture_output=True, text=True)  # noqa: S603
-                
+                result = subprocess.run(
+                    command, check=True, capture_output=True, text=True
+                )  # noqa: S603
+
                 ## TODO: Implement for other archivers
                 result_lines = str(result.stdout).splitlines()
                 exploded_size = 0

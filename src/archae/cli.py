@@ -16,6 +16,7 @@ from enum import Enum
 import magic
 import rich_click as click
 
+# TODO: Break out tool helpers into modular files
 tool_names = [
     "7z",
     "pea",

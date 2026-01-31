@@ -72,6 +72,7 @@ archae --help
 - Uses 7z/peazip/unar (not 7za/7zr) to try to extract archives
 - No substantial limit on the number of archive layers
 - Identifies file types via libmagic
+- Basic archive bomb protections
 
 ## TODOs
 

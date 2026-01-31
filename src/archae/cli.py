@@ -410,8 +410,8 @@ class ByteScale(Enum):
         return obj
 
     @property
-    def set_prefix_letter(self) -> None:
-        obj.prefix_letter = prefix_letter
+    def set_prefix_letter(self, prefix_letter) -> None:
+        self.prefix_letter = prefix_letter
 
     @property
     def get_prefix_letter(self):
@@ -473,7 +473,7 @@ class FileSizeParamType(click.ParamType):
 defaults = {
     "max_total_size_bytes": FileSizeParamType.expand_value("100G"),
     "max_archive_size_bytes": FileSizeParamType.expand_value("10G"),
-    "min-archive_ratio": 0.005,
+    "min_archive_ratio": 0.005,
 }
 
 config = copy.deepcopy(defaults)
@@ -509,7 +509,8 @@ config = copy.deepcopy(defaults)
 @click.option(
     "--min_archive_ratio",
     type=click.FloatRange(0, 1),
-    help="Minimum allowed compression ratio for an archive. A floating-point value between 0.0 and 1.0, inclusive. Default is 0.005",
+    default=defaults["min_archive_ratio"],
+    help=f"Minimum allowed compression ratio for an archive. A floating-point value between 0.0 and 1.0, inclusive. Default is {defaults['min_archive_ratio']}",
 )
 @click.version_option(metadata.version("archae"), "-v", "--version")
 def cli(
@@ -720,7 +721,7 @@ def get_archive_extracted_size(archive_path: Path, hash: str, archiver: str) -> 
     Returns:
         int: The size of the contents
     """
-    extracted_path = extract_dir / hash
+    extract_dir / hash
     command: list[str] = []
     archiver_tool: str | None = tools[archiver]
     if archiver_tool is not None:
@@ -737,7 +738,7 @@ def get_archive_extracted_size(archive_path: Path, hash: str, archiver: str) -> 
             with contextlib.suppress(FileNotFoundError):
                 result = subprocess.run(
                     command, check=True, capture_output=True, text=True
-                )  # noqa: S603
+                )
 
                 ## TODO: Implement for other archivers
                 result_lines = str(result.stdout).splitlines()
@@ -745,14 +746,13 @@ def get_archive_extracted_size(archive_path: Path, hash: str, archiver: str) -> 
                 for line in result_lines:
                     if line.startswith("Size = "):
                         exploded_size += int(line[7:])
-                return exploded_size
 
     else:
         click.echo(
             f"No sizing command for archiver: {archiver}; this generally shouldn't happen!"
         )
 
-    return extracted_path
+    return exploded_size
 
 
 def sha256_hash_file(file_path: Path) -> str:

@@ -393,6 +393,8 @@ tools = {}
 
 
 class ByteScale(Enum):
+    """Byte scale prefix converter."""
+
     NONE = (0, "")
     KILO = (1, "K")
     MEGA = (2, "M")
@@ -410,21 +412,29 @@ class ByteScale(Enum):
         return obj
 
     @property
-    def set_prefix_letter(self, prefix_letter) -> None:
-        self.prefix_letter = prefix_letter
-
-    @property
     def get_prefix_letter(self):
+        """Return the prefix letter for this scale."""
         return self.prefix_letter
 
 
 class FileSizeParamType(click.ParamType):
+    """Class to handle FileSize as a Click Param."""
+
     name = "filesize"
 
     @staticmethod
-    def compact_value(value) -> str:
+    def compact_value(value: float) -> str:
+        """Convert a float of file size to a FileSizeParam string.
+
+        Args:
+            value (float): The size to convert
+
+        Returns:
+            str: A string with the most collapsed exact byte size rep.
+
+        """
         exponent = 0
-        modulo = 0
+        modulo: float = 0
         while modulo == 0 and exponent < 4:
             modulo = value % 1024
             if modulo == 0:
@@ -433,14 +443,23 @@ class FileSizeParamType(click.ParamType):
         return f"{value}{ByteScale(exponent).get_prefix_letter}"
 
     @staticmethod
-    def expand_value(value):
+    def expand_value(value: str | int) -> int:
+        """Convert a FileSizeParam string or int to an int.
+
+        Args:
+            value (str | int): The value to convert as necessary.
+
+        Returns:
+            int: Size in bytes
+
+        """
         try:
             return int(value)
-        except:
+        except TypeError:
             pass
 
         # Regex to split number and unit
-        match = re.match(r"^(\d+(?:\.\d+)?)\s*([KMGT]B?)$", value, re.IGNORECASE)
+        match = re.match(r"^(\d+(?:\.\d+)?)\s*([KMGT]B?)$", str(value), re.IGNORECASE)
         if not match:
             msg = f"{value} is not a valid file size (e.g., 10G, 500M)"
             raise ValueError(msg)
@@ -463,11 +482,23 @@ class FileSizeParamType(click.ParamType):
         # Default to bytes if no specific unit multiplier, or assume B
         return int(number * units.get(unit, 1))
 
-    def convert(self, value, param, ctx):
+    def convert(self, value: click.Option, param: str, ctx: click.Context) -> int:
+        """Convert a FileSizeParam to an int.
+
+        Args:
+            value (click.Option): The value to convert as necessary.
+            param (str): The param we are validating.
+            ctx (click.Context): The click Context to fail if we can't parse it.
+
+        Returns:
+            int: Size in bytes
+
+        """
         try:
             return self.expand_value(value)
         except ValueError as err:
             self.fail(str(err), param, ctx)
+            return 0
 
 
 defaults = {
@@ -534,21 +565,6 @@ extract_dir = base_dir / "extracted"
 if extract_dir.exists() and extract_dir.is_dir():
     shutil.rmtree(extract_dir)
 extract_dir.mkdir(exist_ok=True)
-
-
-def convert_size_arg(self, value, param, ctx):
-    if isinstance(value, int):
-        return value
-
-    # Regex to split number and unit
-    match = re.match(r"^(\d+(?:\.\d+)?)\s*([KMGT]B?)$", value, re.IGNORECASE)
-    if not match:
-        self.fail(f"{value} is not a valid file size (e.g., 10G, 500M)", param, ctx)
-
-    number, unit = match.groups()
-    number = float(number)
-    unit = unit.upper()
-    return None
 
 
 def locate_tools() -> None:

@@ -15,8 +15,8 @@ from typing import Any
 
 import magic
 import rich_click as click
+from typing_extensions import Self
 
-# TODO: Break out tool helpers into modular files per archiver
 tool_names = [
     "7z",
     "pea",
@@ -402,9 +402,19 @@ class ByteScale(Enum):
     TERA = (4, "T")
     PETA = (5, "P")
 
-    def __new__(cls, exponent, prefix_letter):
-        """__new__ is used to control how new enum members are instantiated.
+    def __new__(cls, exponent: int, prefix_letter: str) -> Self:
+        """Apply values to the new Enum.
+
+        __new__ is used to control how new enum members are instantiated.
         It must set the `_value_` attribute and any custom attributes.
+
+        Args:
+            exponent (int): the exponent value for the scale
+            prefix_letter (str): the prefix letter for the scale
+
+        Returns:
+            ByteScale: A new ByteScale enum.
+
         """
         obj = object.__new__(cls)
         obj._value_ = exponent
@@ -435,7 +445,7 @@ class FileSizeParamType(click.ParamType):
         """
         exponent = 0
         modulo: float = 0
-        while modulo == 0 and exponent < 4:
+        while modulo == 0 and exponent < int(ByteScale.PETA.value):
             modulo = value % 1024
             if modulo == 0:
                 exponent += 1
@@ -454,8 +464,9 @@ class FileSizeParamType(click.ParamType):
 
         """
         try:
-            return int(value)
-        except TypeError:
+            result = int(value)
+            return result
+        except ValueError:
             pass
 
         # Regex to split number and unit
@@ -756,7 +767,6 @@ def get_archive_extracted_size(archive_path: Path, hash: str, archiver: str) -> 
                     command, check=True, capture_output=True, text=True
                 )
 
-                ## TODO: Implement for other archivers
                 result_lines = str(result.stdout).splitlines()
                 exploded_size = 0
                 for line in result_lines:

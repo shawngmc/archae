@@ -202,6 +202,13 @@ def handle_file(file_path: Path) -> None:
                 click.echo(
                     f"Skipped archive {file_path} because expected size {extracted_size} is greater than max_archive_size_bytes {config['max_archive_size_bytes']}"
                 )
+            elif (
+                get_tracked_file_size() + extracted_size
+                > config["max_total_size_bytes"]
+            ):
+                click.echo(
+                    f"Skipped archive {file_path} because expected size {extracted_size} + current tracked files {get_tracked_file_size()} is greater than max_total_size_bytes {config['max_total_size_bytes']}"
+                )
             elif compression_ratio < config["min_archive_ratio"]:
                 click.echo(
                     f"Skipped archive {file_path} because compression ratio {compression_ratio:.5f} is less than min_archive_ratio {config['min_archive_ratio']}"
@@ -363,3 +370,12 @@ def add_metadata_to_hash(hash: str, key: str, value: Any) -> None:
         value (Any): The metadata value.
     """
     tracked_files[hash]["metadata"][key] = value
+
+
+def get_tracked_file_size() -> int:
+    """Get the total size of all tracked files.
+
+    Returns:
+        int: The total size in bytes.
+    """
+    return sum(tracked_files[hash].get("size", 0) for hash in tracked_files)

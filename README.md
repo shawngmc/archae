@@ -31,7 +31,7 @@ Every once and a while, I run into an issue: multiple layers of archives. The re
 - Detects duplicate archives
 - Basic archive bomb protections
     - min_archive_size_bytes - ensures the uncompressed size of an archive is limited
-    - min_total_size_bytes - (NYI) ensures the total extracted footprint isn't above a certain size
+    - min_total_size_bytes - ensures the total extracted footprint isn't above a certain size
     - min_archive_ratio - ensures very-high-compression-ratio archives are stopped
 
 ## Installation

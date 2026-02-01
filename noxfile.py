@@ -15,11 +15,10 @@ ALL_PYTHON_VERSIONS = [
     #     if (match := re.search(r"Programming Language :: Python :: (?P<version>3\.\d+)", line)) is not None:
     #         cog.outl(f'"{match.group("version")}",')
     # ]]]
-    "3.9",
-    "3.10",
     "3.11",
     "3.12",
     "3.13",
+    "3.14",
     # [[[end]]]
 ]
 
@@ -28,7 +27,7 @@ ALL_PYTHON_VERSIONS = [
 # rtd = yaml.safe_load(open(".readthedocs.yaml"))
 # cog.outl(f'DOCS_PYTHON_VERSION = "{rtd["build"]["tools"]["python"]}"')
 # ]]]
-DOCS_PYTHON_VERSION = "3.13"
+DOCS_PYTHON_VERSION = "3.14"
 # [[[end]]]
 
 ROOT_DIR = Path(__file__).resolve().parent
@@ -83,7 +82,7 @@ def cog(session: nox.Session) -> None:
     for cog_input_file in cog_input_files:
         session.run("cog", *session.posargs, "-r", cog_input_file)
 
-    session.notify("pre-commit", ["trailing-whitespace", "--files", *cog_input_files])
+    # session.notify("pre-commit", ["trailing-whitespace", "--files", *cog_input_files])
 
 
 @nox.session(name="pre-commit")

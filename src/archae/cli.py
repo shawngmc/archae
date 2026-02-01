@@ -122,7 +122,7 @@ config = copy.deepcopy(defaults)
     help_config=click.RichHelpConfiguration(
         width=88,
         show_arguments=True,
-        use_rich_markup=True,
+        text_markup=True,
     ),
 )
 @click.argument(

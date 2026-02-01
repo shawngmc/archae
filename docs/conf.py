@@ -18,7 +18,6 @@ version = release.rsplit(".", 1)[0]
 extensions = [
     "myst_parser",
     "sphinx.ext.autodoc",
-    "sphinx.ext.autodoc.typehints",
     "sphinx.ext.doctest",
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",

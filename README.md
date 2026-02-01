@@ -2,7 +2,7 @@
 
 # Archae
 
-![Archae Logo of a spider exploring a sarcophagus](archae_logo.png)
+![Archae Logo of a spider exploring a sarcophagus](./_static/archae_logo.png)
 
 [![PyPI](https://img.shields.io/pypi/v/archae)](https://img.shields.io/pypi/v/archae)
 [![Supported Python Versions](https://img.shields.io/pypi/pyversions/archae)](https://pypi.org/project/archae/)
@@ -50,18 +50,28 @@ cog.outl(f"\n```sh\narchae --help\n{help.rstrip()}\n```\n")
 ```sh
 archae --help
 
- Usage: archae [OPTIONS] INPUT
+ Usage: archae [OPTIONS] ARCHIVE_PATH
 
- Repeat the input.
  Archae explodes archives.
 
 ╭─ Arguments ──────────────────────────────────────────────────────────────────────────╮
-│ *  INPUT_  INPUT  [required]                                                         │
+│ *  ARCHIVE_PATH  FILE  Archive to examine [required]                                 │
 ╰──────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Options ────────────────────────────────────────────────────────────────────────────╮
-│ --reverse  -r  Reverse the input.                                                    │
-│ --version  -v  Show the version and exit.                                            │
-│ --help     -h  Show this message and exit.                                           │
+│ --max_total_size_bytes        FILESIZE               Maximum total extraction size   │
+│                                                      before failing, default 100G    │
+│                                                      [default: 107374182400]         │
+│ --max_archive_size_bytes      FILESIZE               Maximum individual archive      │
+│                                                      extraction size before failing, │
+│                                                      default 10G [default:           │
+│                                                      10737418240]                    │
+│ --min_archive_ratio           FLOAT RANGE [0<=x<=1]  Minimum allowed compression     │
+│                                                      ratio for an archive. A         │
+│                                                      floating-point value between    │
+│                                                      0.0 and 1.0, inclusive. Default │
+│                                                      is 0.005 [default: 0.005]       │
+│ --version                 -v                         Show the version and exit.      │
+│ --help                    -h                         Show this message and exit.     │
 ╰──────────────────────────────────────────────────────────────────────────────────────╯
 ```
 

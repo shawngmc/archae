@@ -290,7 +290,6 @@ def sha256_hash_file(file_path: Path) -> str:
     """
     try:
         with file_path.open("rb") as f:
-            # Use hashlib.file_digest for simplicity and efficiency in Python 3.11+
             digest = hashlib.file_digest(f, "sha256")
         return digest.hexdigest()
     except FileNotFoundError:

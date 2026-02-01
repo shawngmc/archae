@@ -14,6 +14,7 @@ import magic
 import rich_click as click
 
 import archae.util.archiver
+from archae.config import default_settings, settings
 from archae.util.enum import ByteScale
 
 if TYPE_CHECKING:
@@ -62,6 +63,8 @@ class FileSizeParamType(click.ParamType):
             return int(value)
         except ValueError:
             pass
+        except TypeError:
+            pass
 
         # Regex to split number and unit
         match = re.match(r"^(\d+(?:\.\d+)?)\s*([KMGTP]B?)$", str(value), re.IGNORECASE)
@@ -97,15 +100,6 @@ class FileSizeParamType(click.ParamType):
             return 0
 
 
-defaults = {
-    "max_total_size_bytes": FileSizeParamType.expand_value("100G"),
-    "max_archive_size_bytes": FileSizeParamType.expand_value("10G"),
-    "min_archive_ratio": 0.005,
-}
-
-config = copy.deepcopy(defaults)
-
-
 @click.command(
     context_settings={"help_option_names": ["-h", "--help"], "show_default": True}
 )
@@ -124,20 +118,17 @@ config = copy.deepcopy(defaults)
 @click.option(
     "--max_total_size_bytes",
     type=FileSizeParamType(),
-    default=defaults["max_total_size_bytes"],
-    help=f"Maximum total extraction size before failing, default {FileSizeParamType.compact_value(defaults['max_total_size_bytes'])}",
+    help=f"Maximum total extraction size before failing, default {default_settings['MAX_TOTAL_SIZE_BYTES']})",
 )
 @click.option(
     "--max_archive_size_bytes",
     type=FileSizeParamType(),
-    default=defaults["max_archive_size_bytes"],
-    help=f"Maximum individual archive extraction size before failing, default {FileSizeParamType.compact_value(defaults['max_archive_size_bytes'])}",
+    help=f"Maximum individual archive extraction size before failing, default {default_settings['MAX_ARCHIVE_SIZE_BYTES']}",
 )
 @click.option(
     "--min_archive_ratio",
     type=click.FloatRange(0, 1),
-    default=defaults["min_archive_ratio"],
-    help=f"Minimum allowed compression ratio for an archive. A floating-point value between 0.0 and 1.0, inclusive. Default is {defaults['min_archive_ratio']}",
+    help=f"Minimum allowed compression ratio for an archive. A floating-point value between 0.0 and 1.0, inclusive. Default is {default_settings['MIN_ARCHIVE_RATIO']}",
 )
 @click.version_option(metadata.version("archae"), "-v", "--version")
 def cli(
@@ -148,9 +139,16 @@ def cli(
 ) -> None:
     """Archae explodes archives."""
     locate_tools()
-    config["max_total_size_bytes"] = max_total_size_bytes
-    config["max_archive_size_bytes"] = max_archive_size_bytes
-    config["min_archive_ratio"] = min_archive_ratio
+    if max_total_size_bytes:
+        settings["MAX_TOTAL_SIZE_BYTES"] = FileSizeParamType.expand_value(
+            max_total_size_bytes
+        )
+    if max_archive_size_bytes:
+        settings["MAX_ARCHIVE_SIZE_BYTES"] = FileSizeParamType.expand_value(
+            max_archive_size_bytes
+        )
+    if min_archive_ratio:
+        settings["MIN_ARCHIVE_RATIO"] = min_archive_ratio
     handle_file(Path(archive_path))
     debug_print_tracked_files()
 
@@ -198,20 +196,22 @@ def handle_file(file_path: Path) -> None:
             add_metadata_to_hash(
                 base_hash, "overall_compression_ratio", compression_ratio
             )
-            if extracted_size > config["max_archive_size_bytes"]:
+            if extracted_size > FileSizeParamType.expand_value(
+                settings["MAX_ARCHIVE_SIZE_BYTES"]
+            ):
                 click.echo(
-                    f"Skipped archive {file_path} because expected size {extracted_size} is greater than max_archive_size_bytes {config['max_archive_size_bytes']}"
+                    f"Skipped archive {file_path} because expected size {extracted_size} is greater than MAX_ARCHIVE_SIZE_BYTES {settings['MAX_ARCHIVE_SIZE_BYTES']}"
                 )
             elif (
                 get_tracked_file_size() + extracted_size
-                > config["max_total_size_bytes"]
+                > FileSizeParamType.expand_value(settings["MAX_TOTAL_SIZE_BYTES"])
             ):
                 click.echo(
-                    f"Skipped archive {file_path} because expected size {extracted_size} + current tracked files {get_tracked_file_size()} is greater than max_total_size_bytes {config['max_total_size_bytes']}"
+                    f"Skipped archive {file_path} because expected size {extracted_size} + current tracked files {get_tracked_file_size()} is greater than MAX_TOTAL_SIZE_BYTES {settings['MAX_TOTAL_SIZE_BYTES']}"
                 )
-            elif compression_ratio < config["min_archive_ratio"]:
+            elif compression_ratio < settings["MIN_ARCHIVE_RATIO"]:
                 click.echo(
-                    f"Skipped archive {file_path} because compression ratio {compression_ratio:.5f} is less than min_archive_ratio {config['min_archive_ratio']}"
+                    f"Skipped archive {file_path} because compression ratio {compression_ratio:.5f} is less than MIN_ARCHIVE_RATIO {settings['MIN_ARCHIVE_RATIO']}"
                 )
             else:
                 extraction_dir = extract_dir / base_hash

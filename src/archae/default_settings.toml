@@ -1,0 +1,7 @@
+# Default archae configuration
+# Users can override these in ~/.config/archae/settings.toml
+
+[default]
+MAX_TOTAL_SIZE_BYTES = "100G"
+MAX_ARCHIVE_SIZE_BYTES = "10G"
+MIN_ARCHIVE_RATIO = 0.005

@@ -52,6 +52,13 @@ Check out the [Archae documentation](https://archae.readthedocs.io/en/stable/) f
 
 ## Usage
 
+Configuration values are supplied one of four ways, and any item lower in this list will overwrite a prior one:
+
+- Default values are stored in the app
+- A TOML file at ~/.config/archae/ will be created on first run and can override those values (ex. MIN_ARCHIVE_RATIO = 0.005)
+- Env vars starts starting with "ARCHAE\_" are parsed (ex. ARCHAE_MIN_ARCHIVE_RATIO=0.005)
+- Values can be passed in as flags (ex. --min_archive_ratio=0.005)
+
 <!-- start docs-include-usage -->
 
 Running `archae --help` or `python -m archae --help` shows a list of all of the available options and arguments:

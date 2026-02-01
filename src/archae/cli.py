@@ -2,394 +2,24 @@
 
 from __future__ import annotations
 
-import contextlib
 import copy
 import hashlib
 import re
 import shutil
-import subprocess
 from importlib import metadata
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import magic
 import rich_click as click
 
+import archae.util.archiver
 from archae.util.enum import ByteScale
 
-tool_names = [
-    "7z",
-    "pea",
-    "unar",
-]
+if TYPE_CHECKING:
+    from archae.util.archiver.base_archiver import BaseArchiver
 
-mime_types_7z = [
-    "application/x-7z-compressed",
-    "application/vnd.android.package-archive",
-    "application/x-bzip2",
-    "application/x-chrome-extension",
-    "application/x-xpinstall",
-    "application/vnd.debian.binary-package",
-    "application/gzip",
-    "application/java-archive",
-    "application/x-lzma",
-    "application/vnd.ms-cab-compressed",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/msix",
-    "application/appinstaller",
-    "application/appx",
-    "application/appxbundle",
-    "application/msixbundle",
-    "application/x-compress",
-    "application/x-tar",
-    "application/zip",
-    "application/x-apple-diskimage",
-    "application/x-arj",
-    "application/x-cpio",
-    "application/vnd.efi.img",
-    "application/x-alz-compressed",
-    "application/x-xar",
-    "application/x-iso9660-image",
-    "application/x-lzh",
-    "application/vnd.ms-htmlhelp",
-    "application/x-ole-storage",
-    "application/x-vhd",
-    "text/x-nsis",
-    "application/x-qemu-disk",
-    "application/x-rpm",
-    "application/x-rar-compressed",
-    "application/vnd.squashfs",
-    "application/x-archive",
-    "application/x-virtualbox-vdi",
-    "application/x-vmdk-disk",
-    "application/x-ms-wim",
-    "application/x-xz",
-]
-
-extensions_7z = [
-    "7z",
-    "s7z",
-    "apk",
-    "bz2",
-    "tbz2",
-    "crx",
-    "xpi",
-    "deb",
-    "gz",
-    "tgz",
-    "ipa",
-    "jar",
-    "ear",
-    "war",
-    "lzma",
-    "cab",
-    "docx",
-    "docm",
-    "pptx",
-    "pptm",
-    "xlsx",
-    "xlsm",
-    "emsix",
-    "emsixbundle",
-    "msix",
-    "appinstaller",
-    "appx",
-    "appxbundle",
-    "msixbundle",
-    "z",
-    "taz",
-    "tar",
-    "zip",
-    "zipx",
-    "appimage",
-    "dmg ",
-    "img",
-    "arj",
-    "cpio",
-    "cramfs",
-    "raw",
-    "alz",
-    "ext",
-    "ext2",
-    "ext3",
-    "ext4",
-    "xar",
-    "pkg",
-    "fat",
-    "gpt",
-    "hfs",
-    "hfsx",
-    "iso",
-    "lha",
-    "lhz",
-    "mbr",
-    "chm",
-    "chw",
-    "chi",
-    "chq",
-    "msi",
-    "msp",
-    "vhd",
-    "vhdx",
-    "ntfs",
-    "nsi",
-    "exe",
-    "nsis",
-    "qcow2",
-    "qcow",
-    "qcow2c",
-    "rpm",
-    "rar",
-    "r00",
-    "sqfs",
-    "sfs",
-    "sqsh",
-    "squashfs",
-    "scap",
-    "uefif",
-    "udf",
-    "edb",
-    "edp",
-    "edr",
-    "a",
-    "ar",
-    "deb",
-    "lib",
-    "vdi",
-    "vmdk",
-    "wim",
-    "swm",
-    "esd",
-    "xz",
-    "txz",
-]
-
-mime_types_pea = [
-    "application/appinstaller",
-    "application/appx",
-    "application/appxbundle",
-    "application/gzip",
-    "application/java-archive",
-    "application/msix",
-    "application/msixbundle",
-    "application/vnd.android.package-archive",
-    "application/vnd.debian.binary-package",
-    "application/vnd.ms-cab-compressed",
-    "application/vnd.ms-htmlhelp",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/x-7z-compressed",
-    "application/x-ace-compressed",
-    "application/x-apple-diskimage",
-    "application/x-arc",
-    "application/x-arj",
-    "application/x-brotli",
-    "application/x-bzip2",
-    "application/x-chrome-extension",
-    "application/x-compress",
-    "application/x-cpio",
-    "application/x-freearc",
-    "application/x-iso9660-image",
-    "application/x-lzma",
-    "application/x-ms-wim",
-    "application/x-ole-storage",
-    "application/x-rar-compressed",
-    "application/x-rpm",
-    "application/x-tar",
-    "application/x-vhd",
-    "application/x-xar",
-    "application/x-xpinstall",
-    "application/x-xz",
-    "application/zip",
-    "application/zip",
-    "application/zip",
-    "application/zstd",
-]
-
-extensions_pea = [
-    "appinstaller",
-    "appx",
-    "appxbundle",
-    "gz",
-    "tgz",
-    "jar",
-    "ear",
-    "war",
-    "emsix",
-    "emsixbundle",
-    "msix",
-    "msixbundle",
-    "apk",
-    "deb",
-    "cab",
-    "chm",
-    "chw",
-    "chi",
-    "chq",
-    "pptx",
-    "pptm ",
-    "xlsx",
-    "xlsm",
-    "docx",
-    "docm",
-    "7z",
-    "s7z",
-    "ace",
-    "dmg",
-    "img",
-    "arc",
-    "pak",
-    "arj",
-    "br",
-    "bz2",
-    "tbz2",
-    "crx",
-    "z",
-    "taz",
-    "cpio",
-    "arc",
-    "pak",
-    "iso",
-    "img",
-    "lzma",
-    "wim",
-    "swm",
-    "esd",
-    "msi",
-    "msp",
-    "rar",
-    "r00",
-    "rpm",
-    "tar",
-    "vhd",
-    "vhdx",
-    "xar",
-    "pkg",
-    "xpi",
-    "xz",
-    "txz",
-    "ipa",
-    "zip",
-    "zipx",
-    "aar",
-    "zst",
-]
-
-mime_types_unar = [
-    "application/appinstaller",
-    "application/appx",
-    "application/appxbundle",
-    "application/gzip",
-    "application/msix",
-    "application/msixbundle",
-    "application/vnd.android.package-archive",
-    "application/vnd.debian.binary-package",
-    "application/vnd.ms-cab-compressed",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/x-7z-compressed",
-    "application/x-ace-compressed",
-    "application/x-alz-compressed",
-    "application/x-arc",
-    "application/x-archive",
-    "application/x-arj",
-    "application/x-bzip2",
-    "application/x-chrome-extension",
-    "application/x-compress",
-    "application/x-cpio",
-    "application/x-freearc",
-    "application/x-iso9660-image",
-    "application/x-lzh",
-    "application/x-lzma",
-    "application/x-ole-storage",
-    "application/x-rar-compressed",
-    "application/x-stuffit",
-    "application/x-sit",
-    "application/x-stuffitx",
-    "application/x-sitx",
-    "application/x-tar",
-    "application/x-xar",
-    "application/x-xpinstall",
-    "application/x-xz",
-    "application/x-zoo",
-    "application/zip",
-    "application/zip",
-    "text/x-nsis",
-]
-
-extensions_unar = [
-    "appinstaller",
-    "appx",
-    "appxbundle",
-    "gz",
-    "tgz",
-    "emsix",
-    "emsixbundle",
-    "msix",
-    "msixbundle",
-    "apk",
-    "deb",
-    "cab",
-    "pptx",
-    "pptm ",
-    "xlsx ",
-    "xlsm",
-    "docx",
-    "docm",
-    "7z",
-    "s7z",
-    "ace",
-    "alz",
-    "arc",
-    "pak",
-    "a",
-    "ar",
-    "deb",
-    "lib",
-    "arj",
-    "bz2",
-    "tbz2",
-    "crx",
-    "z",
-    "taz",
-    "cpio",
-    "arc",
-    "pak",
-    "iso",
-    "img",
-    "lha",
-    "lhz",
-    "lzma",
-    "msi",
-    "msp",
-    "rar",
-    "r00",
-    "sit",
-    "sitx",
-    "tar",
-    "xar",
-    "pkg",
-    "xpi",
-    "xz",
-    "txz",
-    "zoo",
-    "zip",
-    "zipx",
-    "aar",
-    "nsi",
-    "exe",
-    "nsis",
-    "udf",
-    "edb",
-    "edp",
-    "edr",
-]
-
-tools = {}
+tools: dict[str, BaseArchiver] = {}
 
 
 class FileSizeParamType(click.ParamType):
@@ -543,12 +173,11 @@ extract_dir.mkdir(exist_ok=True)
 
 
 def locate_tools() -> None:
-    """Locate required external tools."""
-    for tool_name in tool_names:
-        tool_path = shutil.which(tool_name)
-        if tool_path is None:
-            pass
-        tools[tool_name] = tool_path
+    """Locate external tools."""
+    for cls in archae.util.archiver.BaseArchiver.__subclasses__():
+        tool_path = shutil.which(str(cls.executable_name))
+        if tool_path is not None:
+            tools[str(cls.archiver_name)] = cls(tool_path)  # type: ignore[abstract]
 
 
 def handle_file(file_path: Path) -> None:
@@ -572,7 +201,7 @@ def handle_file(file_path: Path) -> None:
     if is_file_archive:
         archiver = get_archiver_for_file(base_hash)
         if archiver:
-            extracted_size = get_archive_extracted_size(file_path, base_hash, archiver)
+            extracted_size = archiver.get_archive_uncompressed_size(file_path)
             add_metadata_to_hash(base_hash, "extracted_size", extracted_size)
             compression_ratio = extracted_size / file_size_bytes
             add_metadata_to_hash(
@@ -587,7 +216,8 @@ def handle_file(file_path: Path) -> None:
                     f"Skipped archive {file_path} because compression ratio {compression_ratio:.5f} is less than min_archive_ratio {config['min_archive_ratio']}"
                 )
             else:
-                extraction_dir = extract_archive(file_path, base_hash, archiver)
+                extraction_dir = extract_dir / base_hash
+                archiver.extract_archive(file_path, extraction_dir)
                 child_files = list_child_files(extraction_dir)
                 for child_file in child_files:
                     handle_file(child_file)
@@ -609,17 +239,14 @@ def is_archive(hash: str) -> bool:
     mime_type = metadata.get("type_mime", "").lower()
     extension = metadata.get("extension", "").lower()
 
-    for mime_type_list in [mime_types_7z, mime_types_pea, mime_types_unar]:
-        if mime_type in mime_type_list:
-            return True
-    for extension_list in [extensions_7z, extensions_pea, extensions_unar]:
-        if extension in extension_list:
+    for tool in tools.values():
+        if mime_type in tool.mime_types or extension in tool.file_extensions:
             return True
 
     return False
 
 
-def get_archiver_for_file(hash: str) -> str | None:
+def get_archiver_for_file(hash: str) -> BaseArchiver | None:
     """Determine the appropriate archiver for a file based on its metadata.
 
     Args:
@@ -632,14 +259,9 @@ def get_archiver_for_file(hash: str) -> str | None:
     mime_type = metadata.get("type_mime", "").lower()
     extension = metadata.get("extension", "").lower()
 
-    if "7z" in tools and (mime_type in mime_types_7z or extension in extensions_7z):
-        return "7z"
-    if "pea" in tools and (mime_type in mime_types_pea or extension in extensions_pea):
-        return "pea"
-    if "unar" in tools and (
-        mime_type in mime_types_unar or extension in extensions_unar
-    ):
-        return "unar"
+    for tool in tools.values():
+        if mime_type in tool.mime_types or extension in tool.file_extensions:
+            return tool
     return None
 
 
@@ -657,89 +279,6 @@ def list_child_files(directory_path: Path, pattern: str = "*") -> list[Path]:
     files = list(directory_path.rglob(pattern))
     # Optionally, filter out directories if pattern='*'
     return [file for file in files if file.is_file()]
-
-
-def extract_archive(archive_path: Path, hash: str, archiver: str) -> Path:
-    """Extracts an archive to a specified directory.
-
-    Args:
-        archive_path (Path): The path to the archive file.
-        hash (str): The hash of the archive file.
-        archiver (str): The archiver tool to use for extraction.
-
-    Returns:
-        Path: The path to the extracted contents.
-    """
-    extracted_path = extract_dir / hash
-    command: list[str] = []
-    archiver_tool: str | None = tools[archiver]
-    if archiver_tool is not None:
-        if archiver == "7z":
-            command = [archiver_tool, "x", str(archive_path), f"-o{extracted_path!s}"]
-        elif archiver == "peazip":
-            command = [
-                archiver_tool,
-                "-ext2simple",
-                str(archive_path),
-                str(extracted_path),
-            ]
-        elif archiver == "unar":
-            command = [archiver_tool, "-o", str(extracted_path), str(archive_path)]
-        else:
-            click.echo(
-                f"Unsupported archiver: {archiver}; this generally shouldn't happen!"
-            )
-
-        if command:
-            with contextlib.suppress(FileNotFoundError):
-                subprocess.run(command, check=True)  # noqa: S603
-    else:
-        click.echo(
-            f"No extraction command for archiver: {archiver}; this generally shouldn't happen!"
-        )
-
-    return extracted_path
-
-
-def get_archive_extracted_size(archive_path: Path, hash: str, archiver: str) -> int:
-    """Get the uncompressed size of the contents.
-
-    Args:
-        archive_path (Path): The path to the archive file.
-        hash (str): The hash of the archive file.
-        archiver (str): The archiver tool to use for extraction.
-
-    Returns:
-        int: The size of the contents
-    """
-    extract_dir / hash
-    command: list[str] = []
-    archiver_tool: str | None = tools[archiver]
-    if archiver_tool is not None:
-        if archiver == "7z":
-            command = [archiver_tool, "l", "-slt", str(archive_path)]
-        elif archiver in {"peazip", "unar"}:
-            click.echo(f"{archiver} size testing not yet implemented!")
-        else:
-            click.echo(
-                f"Unsupported archiver: {archiver}; this generally shouldn't happen!"
-            )
-
-        if command:
-            result = subprocess.run(command, check=True, capture_output=True, text=True)  # noqa: S603
-
-            result_lines = str(result.stdout).splitlines()
-            exploded_size = 0
-            for line in result_lines:
-                if line.startswith("Size = "):
-                    exploded_size += int(line[7:])
-
-    else:
-        click.echo(
-            f"No sizing command for archiver: {archiver}; this generally shouldn't happen!"
-        )
-
-    return exploded_size
 
 
 def sha256_hash_file(file_path: Path) -> str:

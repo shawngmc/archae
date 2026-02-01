@@ -2,6 +2,8 @@
 
 # Archae
 
+![Archae Logo of a spider exploring a sarcophagus](archae_logo.png)
+
 [![PyPI](https://img.shields.io/pypi/v/archae)](https://img.shields.io/pypi/v/archae)
 [![Supported Python Versions](https://img.shields.io/pypi/pyversions/archae)](https://pypi.org/project/archae/)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/shawngmc/archae/main.svg)](https://results.pre-commit.ci/latest/github/shawngmc/archae/main)

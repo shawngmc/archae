@@ -42,3 +42,9 @@ nox
 ```
 nox -s cog
 ```
+
+### Pushing to PyPi
+
+```
+nox -s release-to-pypi
+```

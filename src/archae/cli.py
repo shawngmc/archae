@@ -64,28 +64,19 @@ class FileSizeParamType(click.ParamType):
             pass
 
         # Regex to split number and unit
-        match = re.match(r"^(\d+(?:\.\d+)?)\s*([KMGT]B?)$", str(value), re.IGNORECASE)
+        match = re.match(r"^(\d+(?:\.\d+)?)\s*([KMGTP]B?)$", str(value), re.IGNORECASE)
         if not match:
             msg = f"{value} is not a valid file size (e.g., 10G, 500M)"
             raise ValueError(msg)
 
         number, unit = match.groups()
         number = float(number)
-        unit = unit.upper()
+        unit = unit[0].upper()
 
-        units = {
-            "K": 1024,
-            "KB": 1024,
-            "M": 1024**2,
-            "MB": 1024**2,
-            "G": 1024**3,
-            "GB": 1024**3,
-            "T": 1024**4,
-            "TB": 1024**4,
-        }
+        byte_scale = 1024 ** (ByteScale.from_prefix_letter(unit).value)
 
         # Default to bytes if no specific unit multiplier, or assume B
-        return int(number * units.get(unit, 1))
+        return int(number * byte_scale)
 
     def convert(self, value: click.Option, param: str, ctx: click.Context) -> int:
         """Convert a FileSizeParam to an int.

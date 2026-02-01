@@ -44,3 +44,12 @@ class ByteScale(Enum):
     def prefix_letter(self, value: str) -> None:
         """Setter for prefix letter."""
         self._prefix_letter = value
+
+    @staticmethod
+    def from_prefix_letter(prefix_letter: str) -> Self:  # type: ignore[misc]
+        """Static method to look up from a prefix_letter."""
+        for member in ByteScale:
+            if member.prefix_letter == prefix_letter.upper():
+                return member
+        msg = f"'{prefix_letter}' is not a valid byte scale prefix letter."
+        raise ValueError(msg)

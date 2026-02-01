@@ -15,6 +15,25 @@ Archae explodes archives.
 
 <!-- end docs-include-index -->
 
+## Why
+
+Every once and a while, I run into an issue: multiple layers of archives. The reasons vary, but examples would include:
+
+- Searching for something in a ZIP of folders that contained a ZIP with a CD image in it
+- Running a malware scan and finding an obscure archive format was missed and not even flagged
+  Meanwhile, I want to make sure I don't fill my disk, especially if an archive bomb (more commonly known as a ZIP bomb) has been jammed in somewhere. They're only funny the first time. :D
+
+## Features
+
+- Uses 7z/peazip/unar (not 7za/7zr) to try to extract archives
+- No substantial limit on the number of archive layers
+- Identifies file types via libmagic
+- Detects duplicate archives
+- Basic archive bomb protections
+    - min_archive_size_bytes - ensures the uncompressed size of an archive is limited
+    - min_total_size_bytes - (NYI) ensures the total extracted footprint isn't above a certain size
+    - min_archive_ratio - ensures very-high-compression-ratio archives are stopped
+
 ## Installation
 
 <!-- start docs-include-installation -->
@@ -79,19 +98,15 @@ archae --help
 
 <!-- end docs-include-usage -->
 
-## Features
-
-- Uses 7z/peazip/unar (not 7za/7zr) to try to extract archives
-- No substantial limit on the number of archive layers
-- Identifies file types via libmagic
-- Basic archive bomb protections
-
 ## TODOs
 
-- Protect against/detect archive bombs (malicious disk usage)
+- More archive bomb protections
+    - min_total_size_bytes - (NYI) ensures the total extracted footprint isn't above a certain size
+    - min_free_space - minimum free space at the extraction location
+    - delete_archives_as_exploded - remove archive files to reduce duplication (boolean)
+    - max_archive_depth - allow setting a maximum archive depth
 - Improve archive type detection
 - Separate between extractable and non-extractable archive types
-- Protect against/detect depth attacks (excessively nested archives)
 - Detect password-protected archives
 - Allow supplying archive passwords by hash
 - Add custom magic to detect obscure archive formats

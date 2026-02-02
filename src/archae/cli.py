@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import logging
 import shutil
 from importlib import metadata
 from pathlib import Path
@@ -18,6 +19,7 @@ from archae.config import apply_options, convert_settings, settings
 if TYPE_CHECKING:
     from archae.util.archiver.base_archiver import BaseArchiver
 
+logger = logging.getLogger(__name__)
 tools: dict[str, BaseArchiver] = {}
 
 
@@ -85,7 +87,7 @@ def handle_file(file_path: Path) -> None:
     Args:
         file_path (Path): The path to the file.
     """
-    click.echo(f"Starting examination of file: {file_path!s}")
+    logger.info("Starting examination of file: %s", file_path)
 
     base_hash = sha256_hash_file(file_path)
     file_size_bytes = file_path.stat().st_size
@@ -107,26 +109,39 @@ def handle_file(file_path: Path) -> None:
                 base_hash, "overall_compression_ratio", compression_ratio
             )
             if extracted_size > settings["MAX_ARCHIVE_SIZE_BYTES"]:
-                click.echo(
-                    f"Skipped archive {file_path} because expected size {extracted_size} is greater than MAX_ARCHIVE_SIZE_BYTES {settings['MAX_ARCHIVE_SIZE_BYTES']}"
+                logger.warning(
+                    "Skipped archive %s because expected size %s is greater than MAX_ARCHIVE_SIZE_BYTES %s",
+                    file_path,
+                    extracted_size,
+                    settings["MAX_ARCHIVE_SIZE_BYTES"],
                 )
             elif (
                 get_tracked_file_size() + extracted_size
                 > settings["MAX_TOTAL_SIZE_BYTES"]
             ):
-                click.echo(
-                    f"Skipped archive {file_path} because expected size {extracted_size} + current tracked files {get_tracked_file_size()} is greater than MAX_TOTAL_SIZE_BYTES {settings['MAX_TOTAL_SIZE_BYTES']}"
+                logger.warning(
+                    "Skipped archive %s because expected size %s + current tracked files %s is greater than MAX_TOTAL_SIZE_BYTES %s",
+                    file_path,
+                    extracted_size,
+                    get_tracked_file_size(),
+                    settings["MAX_TOTAL_SIZE_BYTES"],
                 )
             elif compression_ratio < settings["MIN_ARCHIVE_RATIO"]:
-                click.echo(
-                    f"Skipped archive {file_path} because compression ratio {compression_ratio:.5f} is less than MIN_ARCHIVE_RATIO {settings['MIN_ARCHIVE_RATIO']}"
+                logger.warning(
+                    "Skipped archive %s because compression ratio %.5f is less than MIN_ARCHIVE_RATIO %s",
+                    file_path,
+                    compression_ratio,
+                    settings["MIN_ARCHIVE_RATIO"],
                 )
             elif (
                 shutil.disk_usage(base_dir).free - extracted_size
-                > settings["MIN_DISK_FREE_SPACE"]
+                < settings["MIN_DISK_FREE_SPACE"]
             ):
-                click.echo(
-                    f"Skipped archive {file_path} because extracting it would leave less than MIN_DISK_FREE_SPACE {settings['MIN_DISK_FREE_SPACE']} bytes free at extraction location {base_dir!s}"
+                logger.warning(
+                    "Skipped archive %s because extracting it would leave less than MIN_DISK_FREE_SPACE %s bytes free at extraction location %s",
+                    file_path,
+                    settings["MIN_DISK_FREE_SPACE"],
+                    base_dir,
                 )
             else:
                 extraction_dir = extract_dir / base_hash
@@ -135,7 +150,7 @@ def handle_file(file_path: Path) -> None:
                 for child_file in child_files:
                     handle_file(child_file)
         else:
-            click.echo(f"No suitable archiver found for file: {file_path!s}")
+            logger.warning("No suitable archiver found for file: %s", file_path)
 
 
 def is_archive(hash: str) -> bool:
@@ -213,15 +228,15 @@ def sha256_hash_file(file_path: Path) -> str:
 
 def debug_print_tracked_files() -> None:
     """Print the tracked files for debugging purposes."""
-    click.echo("------------------------------------------------")
+    logger.debug("------------------------------------------------")
     for hash, info in tracked_files.items():
-        click.echo(f"Hash: {hash}")
-        click.echo(f"  Size: {info.get('size', 'Unknown')} bytes")
+        logger.debug("Hash: %s", hash)
+        logger.debug("  Size: %s bytes", info.get("size", "Unknown"))
         for path in info.get("paths", []):
-            click.echo(f"  Path: {path}")
-        click.echo("  Metadata:")
+            logger.debug("  Path: %s", path)
+        logger.debug("  Metadata:")
         for key, value in info.get("metadata", {}).items():
-            click.echo(f"    {key}: {value}")
+            logger.debug("    %s: %s", key, value)
 
 
 def track_file(hash: str, file_size_bytes: int) -> None:

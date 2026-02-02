@@ -26,9 +26,12 @@ classifiers = [
 requires-python = ">=3.12"
 dependencies = [
     "click",
+    "dyanconf>=3.2.12",
     "platformdirs>=4.5.1",
     "python-magic",
+    "PyYAML>=6.0.3",
     "rich_click",
+    "types-PyYAML>=6",
 ]
 
 [dependency-groups]

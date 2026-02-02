@@ -1,8 +1,11 @@
 """Runtime config management (default, userconfig and envvars)."""
 
+import importlib
+import typing
 from pathlib import Path
 
 import platformdirs
+import yaml
 from dynaconf import Dynaconf
 
 # Get the package directory for default settings
@@ -38,3 +41,61 @@ default_settings = Dynaconf(
     ],
     environments=True,
 )
+
+
+options_file = package_dir / "options.yaml"
+
+
+def get_options() -> dict:
+    """Return the contents of options.yaml."""
+    with Path.open(options_file) as f:
+        return yaml.safe_load(f)
+
+
+def get_converter(converter_def: str) -> typing.Callable:
+    """Dynamically import and instantiate a converter class.
+
+    Args:
+        converter_def (str): Converter definition in format "module.path:ClassName".
+
+    Returns:
+        Converter function.
+    """
+    # Split the definition into module path and class name
+    module_name, class_name = converter_def.split(":")
+
+    # Import the module
+    module = importlib.import_module(module_name)
+
+    # Get the class from the module
+    return getattr(module, class_name)
+
+
+def apply_options(option_list: tuple[list[tuple[str, str]]]) -> None:
+    """Apply a list of options to the settings.
+
+    Args:
+        option_list (tuple[list[tuple[str, str]]]): List of key-value pairs to apply.
+
+    """
+    options = get_options()
+    for key, value in option_list:
+        # Find the option definition by matching the key
+        option_def = None
+        for def_key in options:
+            option_def = options[def_key]
+            break
+        if option_def:
+            settings[key] = value
+        else:
+            pass
+
+
+def convert_settings() -> None:
+    """Convert settings using their defined converters."""
+    options = get_options()
+    for key in options:
+        option_def = options[key]
+        if "converter" in option_def:
+            converter = get_converter(option_def["converter"])
+            settings[key] = converter(settings[key])

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import copy
 import hashlib
-import re
 import shutil
 from importlib import metadata
 from pathlib import Path
@@ -14,90 +13,12 @@ import magic
 import rich_click as click
 
 import archae.util.archiver
-from archae.config import default_settings, settings
-from archae.util.enum import ByteScale
+from archae.config import apply_options, convert_settings, settings
 
 if TYPE_CHECKING:
     from archae.util.archiver.base_archiver import BaseArchiver
 
 tools: dict[str, BaseArchiver] = {}
-
-
-class FileSizeParamType(click.ParamType):
-    """Class to handle FileSize as a Click Param."""
-
-    name = "filesize"
-
-    @staticmethod
-    def compact_value(value: float) -> str:
-        """Convert a float of file size to a FileSizeParam string.
-
-        Args:
-            value (float): The size to convert
-
-        Returns:
-            str: A string with the most collapsed exact byte size rep.
-
-        """
-        exponent = 0
-        modulo: float = 0
-        while modulo == 0 and exponent < int(ByteScale.PETA.value):
-            modulo = value % 1024
-            if modulo == 0:
-                exponent += 1
-                value = int(value / 1024)
-        return f"{value}{ByteScale(exponent).prefix_letter}"  # type: ignore[call-arg]
-
-    @staticmethod
-    def expand_value(value: str | int) -> int:
-        """Convert a FileSizeParam string or int to an int.
-
-        Args:
-            value (str | int): The value to convert as necessary.
-
-        Returns:
-            int: Size in bytes
-
-        """
-        try:
-            return int(value)
-        except ValueError:
-            pass
-        except TypeError:
-            pass
-
-        # Regex to split number and unit
-        match = re.match(r"^(\d+(?:\.\d+)?)\s*([KMGTP]B?)$", str(value), re.IGNORECASE)
-        if not match:
-            msg = f"{value} is not a valid file size (e.g., 10G, 500M)"
-            raise ValueError(msg)
-
-        number, unit = match.groups()
-        number = float(number)
-        unit = unit[0].upper()
-
-        byte_scale = 1024 ** (ByteScale.from_prefix_letter(unit).value)
-
-        # Default to bytes if no specific unit multiplier, or assume B
-        return int(number * byte_scale)
-
-    def convert(self, value: click.Option, param: str, ctx: click.Context) -> int:
-        """Convert a FileSizeParam to an int.
-
-        Args:
-            value (click.Option): The value to convert as necessary.
-            param (str): The param we are validating.
-            ctx (click.Context): The click Context to fail if we can't parse it.
-
-        Returns:
-            int: Size in bytes
-
-        """
-        try:
-            return self.expand_value(value)
-        except ValueError as err:
-            self.fail(str(err), param, ctx)
-            return 0
 
 
 @click.command(
@@ -116,39 +37,28 @@ class FileSizeParamType(click.ParamType):
     help="Archive to examine",
 )
 @click.option(
-    "--max_total_size_bytes",
-    type=FileSizeParamType(),
-    help=f"Maximum total extraction size before failing, default {default_settings['MAX_TOTAL_SIZE_BYTES']})",
-)
-@click.option(
-    "--max_archive_size_bytes",
-    type=FileSizeParamType(),
-    help=f"Maximum individual archive extraction size before failing, default {default_settings['MAX_ARCHIVE_SIZE_BYTES']}",
-)
-@click.option(
-    "--min_archive_ratio",
-    type=click.FloatRange(0, 1),
-    help=f"Minimum allowed compression ratio for an archive. A floating-point value between 0.0 and 1.0, inclusive. Default is {default_settings['MIN_ARCHIVE_RATIO']}",
+    "-o",
+    "--opt",
+    "options",
+    nargs=2,
+    type=click.Tuple([str, str]),
+    multiple=True,
+    help="Set config options as key value pairs. Use --listopts to see available options.",
 )
 @click.version_option(metadata.version("archae"), "-v", "--version")
 def cli(
     archive_path: str,
-    max_total_size_bytes: int,
-    max_archive_size_bytes: int,
-    min_archive_ratio: float,
+    options: tuple[list[tuple[str, str]]],
 ) -> None:
     """Archae explodes archives."""
+    # Apply any options from the command line, then convert any convertible settings
+    if options:
+        apply_options(options)
+    convert_settings()
+
+    # Locate external tools
     locate_tools()
-    if max_total_size_bytes:
-        settings["MAX_TOTAL_SIZE_BYTES"] = FileSizeParamType.expand_value(
-            max_total_size_bytes
-        )
-    if max_archive_size_bytes:
-        settings["MAX_ARCHIVE_SIZE_BYTES"] = FileSizeParamType.expand_value(
-            max_archive_size_bytes
-        )
-    if min_archive_ratio:
-        settings["MIN_ARCHIVE_RATIO"] = min_archive_ratio
+
     handle_file(Path(archive_path))
     debug_print_tracked_files()
 
@@ -196,15 +106,13 @@ def handle_file(file_path: Path) -> None:
             add_metadata_to_hash(
                 base_hash, "overall_compression_ratio", compression_ratio
             )
-            if extracted_size > FileSizeParamType.expand_value(
-                settings["MAX_ARCHIVE_SIZE_BYTES"]
-            ):
+            if extracted_size > settings["MAX_ARCHIVE_SIZE_BYTES"]:
                 click.echo(
                     f"Skipped archive {file_path} because expected size {extracted_size} is greater than MAX_ARCHIVE_SIZE_BYTES {settings['MAX_ARCHIVE_SIZE_BYTES']}"
                 )
             elif (
                 get_tracked_file_size() + extracted_size
-                > FileSizeParamType.expand_value(settings["MAX_TOTAL_SIZE_BYTES"])
+                > settings["MAX_TOTAL_SIZE_BYTES"]
             ):
                 click.echo(
                     f"Skipped archive {file_path} because expected size {extracted_size} + current tracked files {get_tracked_file_size()} is greater than MAX_TOTAL_SIZE_BYTES {settings['MAX_TOTAL_SIZE_BYTES']}"
@@ -212,6 +120,13 @@ def handle_file(file_path: Path) -> None:
             elif compression_ratio < settings["MIN_ARCHIVE_RATIO"]:
                 click.echo(
                     f"Skipped archive {file_path} because compression ratio {compression_ratio:.5f} is less than MIN_ARCHIVE_RATIO {settings['MIN_ARCHIVE_RATIO']}"
+                )
+            elif (
+                shutil.disk_usage(base_dir).free - extracted_size
+                > settings["MIN_DISK_FREE_SPACE"]
+            ):
+                click.echo(
+                    f"Skipped archive {file_path} because extracting it would leave less than MIN_DISK_FREE_SPACE {settings['MIN_DISK_FREE_SPACE']} bytes free at extraction location {base_dir!s}"
                 )
             else:
                 extraction_dir = extract_dir / base_hash

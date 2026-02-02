@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 import magic
 
-from archae.config import settings
+from archae.config import apply_options, default_settings, settings
 from archae.util.file_tracker import FileTracker
 from archae.util.tool_manager import tools
 
@@ -64,7 +64,7 @@ class ArchiveExtractor:
         """
         logger.info("Starting examination of file: %s", file_path)
 
-        base_hash = self.sha256_hash_file(file_path)
+        base_hash = self._sha256_hash_file(file_path)
         file_size_bytes = file_path.stat().st_size
         self.file_tracker.track_file(base_hash, file_size_bytes)
         self.file_tracker.track_file_path(base_hash, file_path)
@@ -76,10 +76,10 @@ class ArchiveExtractor:
         )
         extension = file_path.suffix.lstrip(".").lower()
         self.file_tracker.add_metadata_to_hash(base_hash, "extension", extension)
-        is_file_archive = self.is_archive(base_hash)
+        is_file_archive = self._is_archive(base_hash)
         self.file_tracker.add_metadata_to_hash(base_hash, "is_archive", is_file_archive)
         if is_file_archive:
-            archiver = self.get_archiver_for_file(base_hash)
+            archiver = self._get_archiver_for_file(base_hash)
             if archiver:
                 extracted_size = archiver.get_archive_uncompressed_size(file_path)
                 self.file_tracker.add_metadata_to_hash(
@@ -127,13 +127,13 @@ class ArchiveExtractor:
                 else:
                     extraction_dir = self.extract_dir / base_hash
                     archiver.extract_archive(file_path, extraction_dir)
-                    child_files = self.list_child_files(extraction_dir)
+                    child_files = self._list_child_files(extraction_dir)
                     for child_file in child_files:
                         self.handle_file(child_file)
             else:
                 logger.warning("No suitable archiver found for file: %s", file_path)
 
-    def is_archive(self, file_hash: str) -> bool:
+    def _is_archive(self, file_hash: str) -> bool:
         """Determine the appropriate archiver for a file based on its metadata.
 
         Args:
@@ -153,7 +153,7 @@ class ArchiveExtractor:
 
         return False
 
-    def get_archiver_for_file(self, file_hash: str) -> BaseArchiver | None:
+    def _get_archiver_for_file(self, file_hash: str) -> BaseArchiver | None:
         """Determine the appropriate archiver for a file based on its metadata.
 
         Args:
@@ -172,7 +172,7 @@ class ArchiveExtractor:
         return None
 
     @staticmethod
-    def list_child_files(directory_path: Path, pattern: str = "*") -> list[Path]:
+    def _list_child_files(directory_path: Path, pattern: str = "*") -> list[Path]:
         """Recursively get a list of files matching a pattern in a directory.
 
         Args:
@@ -188,7 +188,7 @@ class ArchiveExtractor:
         return [file for file in files if file.is_file()]
 
     @staticmethod
-    def sha256_hash_file(file_path: Path) -> str:
+    def _sha256_hash_file(file_path: Path) -> str:
         """Computes the SHA-256 hash of a file.
 
         Args:
@@ -211,3 +211,22 @@ class ArchiveExtractor:
     def get_warnings(self) -> list[str]:
         """Print accumulated warnings for debugging purposes."""
         return accumulator.warnings
+
+    def get_default_settings(self) -> dict:
+        """Get the default settings from the config module.
+
+        Returns:
+            dict: Dictionary of default settings.
+        """
+        return dict(default_settings)
+
+    def apply_settings(self, option_list: list[tuple[str, str]]) -> None:
+        """Apply a list of settings options.
+
+        Args:
+            option_list (list[tuple[str, str]]): List of (key, value) tuples to apply.
+
+        Example:
+            extractor.apply_settings([("MAX_ARCHIVE_SIZE_BYTES", "5000000000")])
+        """
+        apply_options(option_list)

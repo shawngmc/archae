@@ -56,11 +56,17 @@ def get_converter(converter_def: str) -> typing.Callable:
     """Dynamically import and instantiate a converter class.
 
     Args:
-        converter_def (str): Converter definition in format "module.path:ClassName".
+        converter_def (str): Converter definition in format "module.path:ClassName" or a builtin type like "float" or "int".
 
     Returns:
         Converter function.
     """
+    # Handle built-in types
+    if converter_def == "float":
+        return float
+    if converter_def == "int":
+        return int
+
     # Split the definition into module path and class name
     module_name, class_name = converter_def.split(":")
 
@@ -71,11 +77,11 @@ def get_converter(converter_def: str) -> typing.Callable:
     return getattr(module, class_name)
 
 
-def apply_options(option_list: tuple[list[tuple[str, str]]]) -> None:
+def apply_options(option_list: list[tuple[str, str]]) -> None:
     """Apply a list of options to the settings.
 
     Args:
-        option_list (tuple[list[tuple[str, str]]]): List of key-value pairs to apply.
+        option_list (list[tuple[str, str]]): List of key-value pairs to apply.
 
     """
     options = get_options()

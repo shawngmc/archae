@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 @click.version_option(metadata.version("archae"), "-v", "--version")
 def cli(
     archive_path: str,
-    options: tuple[list[tuple[str, str]]],
+    options: list[tuple[str, str]] | None,
 ) -> None:
     """Archae explodes archives."""
     # Apply any options from the command line, then convert any convertible settings

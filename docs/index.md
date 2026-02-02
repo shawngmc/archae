@@ -12,6 +12,7 @@ maxdepth: 2
 
 installation
 usage
+library
 ```
 
 ## CLI Reference
@@ -22,6 +23,7 @@ maxdepth: 4
 ---
 
 cli
+options
 ```
 
 ## Changelog

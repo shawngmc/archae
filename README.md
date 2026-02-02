@@ -30,8 +30,8 @@ Every once and a while, I run into an issue: multiple layers of archives. The re
 - Identifies file types via libmagic
 - Detects duplicate archives
 - Basic archive bomb protections
-    - min_archive_size_bytes - ensures the uncompressed size of an archive is limited
-    - min_total_size_bytes - ensures the total extracted footprint isn't above a certain size
+    - max_archive_size_bytes - ensures the uncompressed size of an archive is limited
+    - max_total_size_bytes - ensures the total extracted footprint isn't above a certain size
     - min_archive_ratio - ensures very-high-compression-ratio archives are stopped
 
 ## Installation
@@ -101,7 +101,6 @@ archae --help
 ## TODOs
 
 - More archive bomb protections
-    - min_total_size_bytes - (NYI) ensures the total extracted footprint isn't above a certain size
     - min_free_space - minimum free space at the extraction location
     - delete_archives_as_exploded - remove archive files to reduce duplication (boolean)
     - max_archive_depth - allow setting a maximum archive depth

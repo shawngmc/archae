@@ -11,7 +11,7 @@ import archae.util.archiver
 if TYPE_CHECKING:
     from archae.util.archiver.base_archiver import BaseArchiver
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("archae")
 
 tools: dict[str, BaseArchiver] = {}
 

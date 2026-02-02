@@ -13,13 +13,11 @@ from typing import TYPE_CHECKING, Any
 import magic
 import rich_click as click
 
-import archae.util.archiver
 from archae.config import apply_options, convert_settings, settings
+from archae.util.tool_manager import locate_tools, tools
 
 if TYPE_CHECKING:
     from archae.util.archiver.base_archiver import BaseArchiver
-
-tools: dict[str, BaseArchiver] = {}
 
 
 class WarningAccumulator(logging.Handler):
@@ -32,13 +30,14 @@ class WarningAccumulator(logging.Handler):
 
     def emit(self, record: logging.LogRecord) -> None:
         """Print and accumulate warning messages."""
-        self.warnings.append(self.format(record))
+        if record.levelno >= logging.WARNING:
+            self.warnings.append(self.format(record))
         print(self.format(record))  # noqa: T201
 
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 accumulator = WarningAccumulator()
-accumulator.setLevel(logging.WARNING)
 logger.addHandler(accumulator)
 logger.setLevel(logging.DEBUG)
 
@@ -82,8 +81,8 @@ def cli(
     locate_tools()
 
     handle_file(Path(archive_path))
-    debug_print_tracked_files()
-    debug_print_warnings()
+    print_tracked_files()
+    print_warnings()
 
 
 tracked_files: dict[str, dict] = {}
@@ -92,21 +91,6 @@ extract_dir = base_dir / "extracted"
 if extract_dir.exists() and extract_dir.is_dir():
     shutil.rmtree(extract_dir)
 extract_dir.mkdir(exist_ok=True)
-
-
-def locate_tools() -> None:
-    """Locate external tools."""
-    for cls in archae.util.archiver.BaseArchiver.__subclasses__():
-        logger.info("Locating tool for %s", cls.archiver_name)
-        tool_path = shutil.which(str(cls.executable_name))
-        if tool_path:
-            logger.info("Found %s at %s", cls.archiver_name, tool_path)
-            tools[str(cls.archiver_name)] = cls(tool_path)  # type: ignore[abstract]
-        else:
-            logger.warning(
-                "Could not find %s; some archive types may not be supported",
-                cls.archiver_name,
-            )
 
 
 def handle_file(file_path: Path) -> None:
@@ -254,23 +238,25 @@ def sha256_hash_file(file_path: Path) -> str:
         return "Error: File not found"
 
 
-def debug_print_tracked_files() -> None:
+def print_tracked_files() -> None:
     """Print the tracked files for debugging purposes."""
-    logger.debug("------------------------------------------------")
+    logger.info("------------------------------------------------")
     for hash, info in tracked_files.items():
-        logger.debug("Hash: %s", hash)
-        logger.debug("  Size: %s bytes", info.get("size", "Unknown"))
+        logger.info("Hash: %s", hash)
+        logger.info("  Size: %s bytes", info.get("size", "Unknown"))
         for path in info.get("paths", []):
-            logger.debug("  Path: %s", path)
-        logger.debug("  Metadata:")
+            logger.info("  Path: %s", path)
+        logger.info("  Metadata:")
         for key, value in info.get("metadata", {}).items():
-            logger.debug("    %s: %s", key, value)
+            logger.info("    %s: %s", key, value)
 
 
-def debug_print_warnings() -> None:
+def print_warnings() -> None:
     """Print accumulated warnings for debugging purposes."""
+    logger.info("------------------------------------------------")
+    logger.info("Accumulated Warnings:")
     for warning in accumulator.warnings:
-        print(warning)  # noqa: T201
+        logger.info(warning)
 
 
 def track_file(hash: str, file_size_bytes: int) -> None:

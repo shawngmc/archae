@@ -19,8 +19,28 @@ from archae.config import apply_options, convert_settings, settings
 if TYPE_CHECKING:
     from archae.util.archiver.base_archiver import BaseArchiver
 
-logger = logging.getLogger(__name__)
 tools: dict[str, BaseArchiver] = {}
+
+
+class WarningAccumulator(logging.Handler):
+    """Logging handler to accumulate warnings while still printing them."""
+
+    def __init__(self) -> None:
+        """Initialize the WarningAccumulator."""
+        super().__init__()
+        self.warnings: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Print and accumulate warning messages."""
+        self.warnings.append(self.format(record))
+        print(self.format(record))  # noqa: T201
+
+
+logger = logging.getLogger(__name__)
+accumulator = WarningAccumulator()
+accumulator.setLevel(logging.WARNING)
+logger.addHandler(accumulator)
+logger.setLevel(logging.DEBUG)
 
 
 @click.command(
@@ -63,6 +83,7 @@ def cli(
 
     handle_file(Path(archive_path))
     debug_print_tracked_files()
+    debug_print_warnings()
 
 
 tracked_files: dict[str, dict] = {}
@@ -76,9 +97,16 @@ extract_dir.mkdir(exist_ok=True)
 def locate_tools() -> None:
     """Locate external tools."""
     for cls in archae.util.archiver.BaseArchiver.__subclasses__():
+        logger.info("Locating tool for %s", cls.archiver_name)
         tool_path = shutil.which(str(cls.executable_name))
-        if tool_path is not None:
+        if tool_path:
+            logger.info("Found %s at %s", cls.archiver_name, tool_path)
             tools[str(cls.archiver_name)] = cls(tool_path)  # type: ignore[abstract]
+        else:
+            logger.warning(
+                "Could not find %s; some archive types may not be supported",
+                cls.archiver_name,
+            )
 
 
 def handle_file(file_path: Path) -> None:
@@ -237,6 +265,12 @@ def debug_print_tracked_files() -> None:
         logger.debug("  Metadata:")
         for key, value in info.get("metadata", {}).items():
             logger.debug("    %s: %s", key, value)
+
+
+def debug_print_warnings() -> None:
+    """Print accumulated warnings for debugging purposes."""
+    for warning in accumulator.warnings:
+        print(warning)  # noqa: T201
 
 
 def track_file(hash: str, file_size_bytes: int) -> None:

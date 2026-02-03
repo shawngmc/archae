@@ -10,9 +10,10 @@ import rich_click as click
 
 from archae.config import apply_options, convert_settings, get_options
 from archae.extractor import ArchiveExtractor
-from archae.util.tool_manager import locate_tools
+from archae.util.tool_manager import ToolManager
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("archae")
+logger.setLevel(logging.INFO)
 
 
 @click.group(
@@ -56,7 +57,7 @@ def extract(
     convert_settings()
 
     # Locate external tools
-    locate_tools()
+    ToolManager.locate_tools()
 
     extractor = ArchiveExtractor()
     extractor.handle_file(Path(archive_path))
@@ -98,8 +99,43 @@ def status() -> None:
     """Show archae status and available tools."""
     logger.info("Archae status:")
     logger.info("Version: %s", metadata.version("archae"))
-    locate_tools()
+    ToolManager.locate_tools()
     logger.info("Tools located and ready to use.")
+    logger.info("------------------------------------------------")
+
+    # Show supported extensions
+    supported_ext = ToolManager.get_supported_extensions()
+    logger.info("Supported file extensions (%d):", len(supported_ext))
+    if supported_ext:
+        logger.info("  %s", ", ".join(supported_ext))
+    else:
+        logger.info("  (none)")
+
+    # Show unsupported extensions
+    unsupported_ext = ToolManager.get_unsupported_extensions()
+    logger.info("Unsupported file extensions (%d):", len(unsupported_ext))
+    if unsupported_ext:
+        logger.info("  %s", ", ".join(unsupported_ext))
+    else:
+        logger.info("  (none)")
+
+    logger.info("------------------------------------------------")
+
+    # Show supported MIME types
+    supported_mime = ToolManager.get_supported_mime_types()
+    logger.info("Supported MIME types (%d):", len(supported_mime))
+    if supported_mime:
+        logger.info("  %s", ", ".join(supported_mime))
+    else:
+        logger.info("  (none)")
+
+    # Show unsupported MIME types
+    unsupported_mime = ToolManager.get_unsupported_mime_types()
+    logger.info("Unsupported MIME types (%d):", len(unsupported_mime))
+    if unsupported_mime:
+        logger.info("  %s", ", ".join(unsupported_mime))
+    else:
+        logger.info("  (none)")
 
 
 def print_tracked_files(tracked_files: dict[str, dict]) -> None:

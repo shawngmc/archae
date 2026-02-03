@@ -12,7 +12,7 @@ import magic
 
 from archae.config import apply_options, default_settings, settings
 from archae.util.file_tracker import FileTracker
-from archae.util.tool_manager import tools
+from archae.util.tool_manager import ToolManager
 
 if TYPE_CHECKING:
     from archae.util.archiver.base_archiver import BaseArchiver
@@ -164,7 +164,7 @@ class ArchiveExtractor:
         mime_type = metadata.get("type_mime", "").lower()
         extension = metadata.get("extension", "").lower()
 
-        for tool in tools.values():
+        for tool in ToolManager.get_tools().values():
             if mime_type in tool.mime_types or extension in tool.file_extensions:
                 return True
 
@@ -183,7 +183,7 @@ class ArchiveExtractor:
         mime_type = metadata.get("type_mime", "").lower()
         extension = metadata.get("extension", "").lower()
 
-        for tool in tools.values():
+        for tool in ToolManager.get_tools().values():
             if mime_type in tool.mime_types or extension in tool.file_extensions:
                 return tool
         return None

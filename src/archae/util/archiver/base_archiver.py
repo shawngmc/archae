@@ -28,12 +28,12 @@ class BaseArchiver(ABC):
     @property
     def file_extensions(self) -> list[str]:
         """A non-abstract method that accesses the class impl for the file extensions."""
-        return self.file_extensions
+        return self.__class__.file_extensions  # type: ignore[return-value]
 
     @property
     def mime_types(self) -> list[str]:
         """A non-abstract method that accesses the class impl for the mime types."""
-        return self.mime_types
+        return self.__class__.mime_types  # type: ignore[return-value]
 
     @abstractmethod
     def extract_archive(self, archive_path: Path, extract_dir: Path) -> None:

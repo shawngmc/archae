@@ -8,14 +8,14 @@ from pathlib import Path
 
 import rich_click as click
 
-from archae.config import apply_options, convert_settings
+from archae.config import apply_options, convert_settings, get_options
 from archae.extractor import ArchiveExtractor
 from archae.util.tool_manager import locate_tools
 
 logger = logging.getLogger(__name__)
 
 
-@click.command(
+@click.group(
     context_settings={"help_option_names": ["-h", "--help"], "show_default": True}
 )
 @click.rich_config(
@@ -25,6 +25,12 @@ logger = logging.getLogger(__name__)
         text_markup=True,
     ),
 )
+@click.version_option(metadata.version("archae"), "-v", "--version")
+def cli() -> None:
+    """Archae explodes archives."""
+
+
+@cli.command()
 @click.argument(
     "archive_path",
     type=click.Path(exists=True, dir_okay=False),
@@ -37,14 +43,13 @@ logger = logging.getLogger(__name__)
     nargs=2,
     type=click.Tuple([str, str]),
     multiple=True,
-    help="Set config options as key value pairs. Use --listopts to see available options.",
+    help="Set config options as key value pairs. Use 'archae listopts' to see available options.",
 )
-@click.version_option(metadata.version("archae"), "-v", "--version")
-def cli(
+def extract(
     archive_path: str,
     options: list[tuple[str, str]] | None,
 ) -> None:
-    """Archae explodes archives."""
+    """Extract and analyze an archive."""
     # Apply any options from the command line, then convert any convertible settings
     if options:
         apply_options(options)
@@ -57,6 +62,44 @@ def cli(
     extractor.handle_file(Path(archive_path))
     print_tracked_files(extractor.get_tracked_files())
     print_warnings(extractor.get_warnings())
+
+
+@cli.command()
+def listopts() -> None:
+    """List all available configuration options."""
+    options = get_options()
+
+    # Load default settings
+    defaults_path = Path(__file__).parent / "default_settings.toml"
+    defaults_content = defaults_path.read_text()
+    defaults = {}
+    in_default_section = False
+    for line in defaults_content.split("\n"):
+        if line.strip() == "[default]":
+            in_default_section = True
+            continue
+        if in_default_section and line.startswith("["):
+            break
+        if in_default_section and "=" in line:
+            key, value = line.split("=", 1)
+            defaults[key.strip()] = value.strip().strip('"')
+
+    logger.info("Available configuration options:")
+    logger.info("------------------------------------------------")
+    for option_name, option_def in sorted(options.items()):
+        logger.info("%s (%s)", option_name, option_def.get("type", "unknown"))
+        logger.info("  %s", option_def.get("help", "No description available"))
+        if option_name in defaults:
+            logger.info("  Default: %s", defaults[option_name])
+
+
+@cli.command()
+def status() -> None:
+    """Show archae status and available tools."""
+    logger.info("Archae status:")
+    logger.info("Version: %s", metadata.version("archae"))
+    locate_tools()
+    logger.info("Tools located and ready to use.")
 
 
 def print_tracked_files(tracked_files: dict[str, dict]) -> None:

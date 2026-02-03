@@ -26,6 +26,6 @@ def locate_tools() -> None:
             tools[str(cls.archiver_name)] = cls(tool_path)  # type: ignore[abstract]
         else:
             logger.warning(
-                "Could not find %s; some archive types may not be supported",
+                "MISSING_ARCHIVER: Could not find %s; some archive types may not be supported",
                 cls.archiver_name,
             )

@@ -62,6 +62,15 @@ class ArchiveExtractor:
         Args:
             file_path (Path): The path to the file.
         """
+        self.__handle_file(file_path)
+
+    def __handle_file(self, file_path: Path, depth: int = 1) -> None:
+        """Internal implementation of handle_file.
+
+        Args:
+            file_path (Path): The path to the file.
+            depth (int): The current depth in the archive extraction tree. Defaults to 1.
+        """
         logger.info("Starting examination of file: %s", file_path)
 
         base_hash = self._sha256_hash_file(file_path)
@@ -79,59 +88,67 @@ class ArchiveExtractor:
         is_file_archive = self._is_archive(base_hash)
         self.file_tracker.add_metadata_to_hash(base_hash, "is_archive", is_file_archive)
         if is_file_archive:
-            archiver = self._get_archiver_for_file(base_hash)
-            if archiver:
-                extracted_size = archiver.get_archive_uncompressed_size(file_path)
-                self.file_tracker.add_metadata_to_hash(
-                    base_hash, "extracted_size", extracted_size
-                )
-                compression_ratio = extracted_size / file_size_bytes
-                self.file_tracker.add_metadata_to_hash(
-                    base_hash, "overall_compression_ratio", compression_ratio
-                )
-                if extracted_size > settings["MAX_ARCHIVE_SIZE_BYTES"]:
-                    logger.warning(
-                        "Skipped archive %s because expected size %s is greater than MAX_ARCHIVE_SIZE_BYTES %s",
-                        file_path,
-                        extracted_size,
-                        settings["MAX_ARCHIVE_SIZE_BYTES"],
+            if settings["MAX_DEPTH"] == 0 or depth < settings["MAX_DEPTH"]:
+                archiver = self._get_archiver_for_file(base_hash)
+                if archiver:
+                    extracted_size = archiver.get_archive_uncompressed_size(file_path)
+                    self.file_tracker.add_metadata_to_hash(
+                        base_hash, "extracted_size", extracted_size
                     )
-                elif (
-                    self.file_tracker.get_tracked_file_size() + extracted_size
-                    > settings["MAX_TOTAL_SIZE_BYTES"]
-                ):
-                    logger.warning(
-                        "Skipped archive %s because expected size %s + current tracked files %s is greater than MAX_TOTAL_SIZE_BYTES %s",
-                        file_path,
-                        extracted_size,
-                        self.file_tracker.get_tracked_file_size(),
-                        settings["MAX_TOTAL_SIZE_BYTES"],
+                    compression_ratio = extracted_size / file_size_bytes
+                    self.file_tracker.add_metadata_to_hash(
+                        base_hash, "overall_compression_ratio", compression_ratio
                     )
-                elif compression_ratio < settings["MIN_ARCHIVE_RATIO"]:
-                    logger.warning(
-                        "Skipped archive %s because compression ratio %.5f is less than MIN_ARCHIVE_RATIO %s",
-                        file_path,
-                        compression_ratio,
-                        settings["MIN_ARCHIVE_RATIO"],
-                    )
-                elif (
-                    shutil.disk_usage(self.base_dir).free - extracted_size
-                    < settings["MIN_DISK_FREE_SPACE"]
-                ):
-                    logger.warning(
-                        "Skipped archive %s because extracting it would leave less than MIN_DISK_FREE_SPACE %s bytes free at extraction location %s",
-                        file_path,
-                        settings["MIN_DISK_FREE_SPACE"],
-                        self.base_dir,
-                    )
+                    if extracted_size > settings["MAX_ARCHIVE_SIZE_BYTES"]:
+                        logger.warning(
+                            "MAX_ARCHIVE_SIZE_BYTES: Skipped archive %s because expected size %s is greater than MAX_ARCHIVE_SIZE_BYTES %s",
+                            file_path,
+                            extracted_size,
+                            settings["MAX_ARCHIVE_SIZE_BYTES"],
+                        )
+                    elif (
+                        self.file_tracker.get_tracked_file_size() + extracted_size
+                        > settings["MAX_TOTAL_SIZE_BYTES"]
+                    ):
+                        logger.warning(
+                            "MAX_TOTAL_SIZE_BYTES: Skipped archive %s because expected size %s + current tracked files %s is greater than MAX_TOTAL_SIZE_BYTES %s",
+                            file_path,
+                            extracted_size,
+                            self.file_tracker.get_tracked_file_size(),
+                            settings["MAX_TOTAL_SIZE_BYTES"],
+                        )
+                    elif compression_ratio < settings["MIN_ARCHIVE_RATIO"]:
+                        logger.warning(
+                            "MIN_ARCHIVE_RATIO: Skipped archive %s because compression ratio %.5f is less than MIN_ARCHIVE_RATIO %s",
+                            file_path,
+                            compression_ratio,
+                            settings["MIN_ARCHIVE_RATIO"],
+                        )
+                    elif (
+                        shutil.disk_usage(self.base_dir).free - extracted_size
+                        < settings["MIN_DISK_FREE_SPACE"]
+                    ):
+                        logger.warning(
+                            "MIN_DISK_FREE_SPACE:Skipped archive %s because extracting it would leave less than MIN_DISK_FREE_SPACE %s bytes free at extraction location %s",
+                            file_path,
+                            settings["MIN_DISK_FREE_SPACE"],
+                            self.base_dir,
+                        )
+                    else:
+                        extraction_dir = self.extract_dir / base_hash
+                        archiver.extract_archive(file_path, extraction_dir)
+                        child_files = self._list_child_files(extraction_dir)
+                        for child_file in child_files:
+                            self.__handle_file(child_file, depth + 1)
                 else:
-                    extraction_dir = self.extract_dir / base_hash
-                    archiver.extract_archive(file_path, extraction_dir)
-                    child_files = self._list_child_files(extraction_dir)
-                    for child_file in child_files:
-                        self.handle_file(child_file)
+                    logger.warning(
+                        "NO_ARCHIVER: No suitable archiver found for file: %s",
+                        file_path,
+                    )
             else:
-                logger.warning("No suitable archiver found for file: %s", file_path)
+                logger.warning(
+                    "MAX_DEPTH: File %s is not extracted; max depth reached.", file_path
+                )
 
     def _is_archive(self, file_hash: str) -> bool:
         """Determine the appropriate archiver for a file based on its metadata.

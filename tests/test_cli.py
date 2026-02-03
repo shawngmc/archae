@@ -35,3 +35,10 @@ def test_version_runner(runner: CliRunner) -> None:
     result = runner.invoke(cli, ["--version"])
     assert result.exit_code == 0
     assert result.output == f"cli, version {metadata.version('archae')}\n"
+
+
+def test_extraction() -> None:
+    result = run_command_in_shell(
+        "archae extract tests/samples/sample1.zip -e tests/output/test_cli_extraction"
+    )
+    assert result.exit_code == 0

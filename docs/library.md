@@ -21,7 +21,7 @@ from pathlib import Path
 from archae.extractor import ArchiveExtractor
 
 # Create an extractor instance
-extractor = ArchiveExtractor(base_dir=Path("."))
+extractor = ArchiveExtractor(extract_dir=Path("."))
 
 # Process an archive
 archive_path = Path("my_archive.zip")

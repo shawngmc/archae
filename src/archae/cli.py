@@ -9,7 +9,7 @@ from pathlib import Path
 
 import rich_click as click
 
-from archae.config import apply_options, convert_settings, get_options
+from archae.config import apply_options, get_options
 from archae.extractor import ArchiveExtractor
 from archae.util.tool_manager import ToolManager
 
@@ -72,7 +72,6 @@ def extract(
     # Apply any options from the command line, then convert any convertible settings
     if options:
         apply_options(options)
-    convert_settings()
 
     # Locate external tools
     ToolManager.locate_tools()

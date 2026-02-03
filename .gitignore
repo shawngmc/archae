@@ -167,3 +167,6 @@ extracted/
 
 # Ignore dynaconf secret files
 .secrets.*
+
+# Ignore test output
+tests/output/

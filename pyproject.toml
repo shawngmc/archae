@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "archae"
-version = "2026.1.0b2"
+version = "2026.2.0b1"
 description = "Archae explodes archives."
 authors = [{name = "Shawn McNaughton", email = "shawngmc@gmail.com"}]
 readme = "README.md"

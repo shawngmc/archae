@@ -30,9 +30,11 @@ Every once and a while, I run into an issue: multiple layers of archives. The re
 - Identifies file types via libmagic
 - Detects duplicate archives
 - Basic archive bomb protections
-    - max_archive_size_bytes - ensures the uncompressed size of an archive is limited
-    - max_total_size_bytes - ensures the total extracted footprint isn't above a certain size
-    - min_archive_ratio - ensures very-high-compression-ratio archives are stopped
+    - MAX_ARCHIVE_SIZE_BYTES - ensures the uncompressed size of an archive is limited
+    - MAX_TOTAL_SIZE_BYTES - ensures the total extracted footprint isn't above a certain size
+    - MIN_ARCHIVE_RATIO - ensures very-high-compression-ratio archives are stopped
+    - MIN_DISK_FREE_SPACE - minimum free space at the extraction location
+    - MAX_DEPTH - allow setting a maximum archive depth to traverse
 
 ## Installation
 
@@ -76,28 +78,18 @@ cog.outl(f"\n```sh\narchae --help\n{help.rstrip()}\n```\n")
 ```sh
 archae --help
 
- Usage: archae [OPTIONS] ARCHIVE_PATH
+ Usage: archae [OPTIONS] COMMAND [ARGS]...
 
  Archae explodes archives.
 
-╭─ Arguments ──────────────────────────────────────────────────────────────────────────╮
-│ *  ARCHIVE_PATH  FILE  Archive to examine [required]                                 │
-╰──────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Options ────────────────────────────────────────────────────────────────────────────╮
-│ --max_total_size_bytes        FILESIZE               Maximum total extraction size   │
-│                                                      before failing, default 100G    │
-│                                                      [default: 107374182400]         │
-│ --max_archive_size_bytes      FILESIZE               Maximum individual archive      │
-│                                                      extraction size before failing, │
-│                                                      default 10G [default:           │
-│                                                      10737418240]                    │
-│ --min_archive_ratio           FLOAT RANGE [0<=x<=1]  Minimum allowed compression     │
-│                                                      ratio for an archive. A         │
-│                                                      floating-point value between    │
-│                                                      0.0 and 1.0, inclusive. Default │
-│                                                      is 0.005 [default: 0.005]       │
-│ --version                 -v                         Show the version and exit.      │
-│ --help                    -h                         Show this message and exit.     │
+│ --version  -v  Show the version and exit.                                            │
+│ --help     -h  Show this message and exit.                                           │
+╰──────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ───────────────────────────────────────────────────────────────────────────╮
+│ extract         Extract and analyze an archive.                                      │
+│ listopts        List all available configuration options.                            │
+│ status          Show archae status and available tools.                              │
 ╰──────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
@@ -108,9 +100,7 @@ archae --help
 ## TODOs
 
 - More archive bomb protections
-    - min_free_space - minimum free space at the extraction location
     - delete_archives_as_exploded - remove archive files to reduce duplication (boolean)
-    - max_archive_depth - allow setting a maximum archive depth
 - Improve archive type detection
 - Separate between extractable and non-extractable archive types
 - Detect password-protected archives

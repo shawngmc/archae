@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import pathlib
 from importlib import metadata
 from pathlib import Path
 
@@ -34,7 +35,8 @@ def cli() -> None:
 @cli.command()
 @click.argument(
     "archive_path",
-    type=click.Path(exists=True, dir_okay=False),
+    type=click.Path(exists=True, dir_okay=False, readable=True, path_type=pathlib.Path),
+    default=Path.cwd() / "extracted",
     help="Archive to examine",
 )
 @click.option(
@@ -46,9 +48,25 @@ def cli() -> None:
     multiple=True,
     help="Set config options as key value pairs. Use 'archae listopts' to see available options.",
 )
+@click.option(
+    "-e",
+    "--extract-dir",
+    "extract_dir",
+    nargs=1,
+    type=click.Path(
+        dir_okay=True,
+        file_okay=False,
+        readable=True,
+        writable=True,
+        path_type=pathlib.Path,
+    ),
+    default=Path.cwd() / "extracted",
+    help="Set config options as key value pairs. Use 'archae listopts' to see available options.",
+)
 def extract(
-    archive_path: str,
+    archive_path: pathlib.Path,
     options: list[tuple[str, str]] | None,
+    extract_dir: pathlib.Path,
 ) -> None:
     """Extract and analyze an archive."""
     # Apply any options from the command line, then convert any convertible settings
@@ -58,9 +76,8 @@ def extract(
 
     # Locate external tools
     ToolManager.locate_tools()
-
-    extractor = ArchiveExtractor()
-    extractor.handle_file(Path(archive_path))
+    extractor = ArchiveExtractor(extract_dir=extract_dir)
+    extractor.handle_file(archive_path)
     print_tracked_files(extractor.get_tracked_files())
     print_warnings(extractor.get_warnings())
 

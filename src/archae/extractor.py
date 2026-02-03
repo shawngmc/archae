@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import logging
 import shutil
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import magic
@@ -15,6 +14,8 @@ from archae.util.file_tracker import FileTracker
 from archae.util.tool_manager import ToolManager
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from archae.util.archiver.base_archiver import BaseArchiver
 
 
@@ -43,14 +44,13 @@ logger.setLevel(logging.DEBUG)
 class ArchiveExtractor:
     """Handles archive extraction and file tracking."""
 
-    def __init__(self, base_dir: Path | None = None) -> None:
+    def __init__(self, extract_dir: Path) -> None:
         """Initialize the ArchiveExtractor.
 
         Args:
-            base_dir (Path | None): The base directory for extraction. Defaults to current working directory.
+            extract_dir (Path): The base directory for extraction. Defaults to current working directory + extracted.
         """
-        self.base_dir = base_dir or Path.cwd()
-        self.extract_dir = self.base_dir / "extracted"
+        self.extract_dir = extract_dir
         if self.extract_dir.exists() and self.extract_dir.is_dir():
             shutil.rmtree(self.extract_dir)
         self.extract_dir.mkdir(exist_ok=True)
@@ -125,14 +125,14 @@ class ArchiveExtractor:
                             settings["MIN_ARCHIVE_RATIO"],
                         )
                     elif (
-                        shutil.disk_usage(self.base_dir).free - extracted_size
+                        shutil.disk_usage(self.extract_dir).free - extracted_size
                         < settings["MIN_DISK_FREE_SPACE"]
                     ):
                         logger.warning(
                             "MIN_DISK_FREE_SPACE:Skipped archive %s because extracting it would leave less than MIN_DISK_FREE_SPACE %s bytes free at extraction location %s",
                             file_path,
                             settings["MIN_DISK_FREE_SPACE"],
-                            self.base_dir,
+                            self.extract_dir,
                         )
                     else:
                         extraction_dir = self.extract_dir / base_hash

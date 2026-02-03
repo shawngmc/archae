@@ -1,4 +1,5 @@
 from importlib import import_module, metadata
+from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
@@ -38,7 +39,9 @@ def test_version_runner(runner: CliRunner) -> None:
 
 
 def test_extraction() -> None:
+    extract_path = Path(__file__).resolve().parent / "output" / "test_cli_extraction"
+    Path.mkdir(extract_path, parents=True, exist_ok=True)
     result = run_command_in_shell(
-        "archae extract tests/samples/sample1.zip -e tests/output/test_cli_extraction"
+        f"archae extract tests/samples/sample1.zip -e {extract_path}"
     )
     assert result.exit_code == 0

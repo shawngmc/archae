@@ -12,7 +12,7 @@ def runner() -> CliRunner:
 
 
 def test_run_as_module() -> None:
-    extractor = ArchiveExtractor(
-        extract_dir=Path(__file__).resolve().parent / "output" / "test_module"
-    )
+    extract_path = Path(__file__).resolve().parent / "output" / "test_module"
+    Path.mkdir(extract_path, parents=True, exist_ok=True)
+    extractor = ArchiveExtractor(extract_dir=extract_path)
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")

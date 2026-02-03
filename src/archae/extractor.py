@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import magic
 
-from archae.config import apply_options, default_settings, settings
+from archae.config import apply_options, get_default_settings, get_settings
 from archae.util.file_tracker import FileTracker
 from archae.util.tool_manager import ToolManager
 
@@ -55,6 +55,8 @@ class ArchiveExtractor:
             shutil.rmtree(self.extract_dir)
         self.extract_dir.mkdir(exist_ok=True)
         self.file_tracker = FileTracker()
+        if ToolManager.get_tools() == {}:
+            ToolManager.locate_tools()
 
     def handle_file(self, file_path: Path) -> None:
         """Handle a file given its path.
@@ -88,7 +90,8 @@ class ArchiveExtractor:
         is_file_archive = self._is_archive(base_hash)
         self.file_tracker.add_metadata_to_hash(base_hash, "is_archive", is_file_archive)
         if is_file_archive:
-            if settings["MAX_DEPTH"] == 0 or depth < settings["MAX_DEPTH"]:
+            settings_dict = get_settings()
+            if settings_dict["MAX_DEPTH"] == 0 or depth < settings_dict["MAX_DEPTH"]:
                 archiver = self._get_archiver_for_file(base_hash)
                 if archiver:
                     extracted_size = archiver.get_archive_uncompressed_size(file_path)
@@ -99,39 +102,39 @@ class ArchiveExtractor:
                     self.file_tracker.add_metadata_to_hash(
                         base_hash, "overall_compression_ratio", compression_ratio
                     )
-                    if extracted_size > settings["MAX_ARCHIVE_SIZE_BYTES"]:
+                    if extracted_size > settings_dict["MAX_ARCHIVE_SIZE_BYTES"]:
                         logger.warning(
                             "MAX_ARCHIVE_SIZE_BYTES: Skipped archive %s because expected size %s is greater than MAX_ARCHIVE_SIZE_BYTES %s",
                             file_path,
                             extracted_size,
-                            settings["MAX_ARCHIVE_SIZE_BYTES"],
+                            settings_dict["MAX_ARCHIVE_SIZE_BYTES"],
                         )
                     elif (
                         self.file_tracker.get_tracked_file_size() + extracted_size
-                        > settings["MAX_TOTAL_SIZE_BYTES"]
+                        > settings_dict["MAX_TOTAL_SIZE_BYTES"]
                     ):
                         logger.warning(
                             "MAX_TOTAL_SIZE_BYTES: Skipped archive %s because expected size %s + current tracked files %s is greater than MAX_TOTAL_SIZE_BYTES %s",
                             file_path,
                             extracted_size,
                             self.file_tracker.get_tracked_file_size(),
-                            settings["MAX_TOTAL_SIZE_BYTES"],
+                            settings_dict["MAX_TOTAL_SIZE_BYTES"],
                         )
-                    elif compression_ratio < settings["MIN_ARCHIVE_RATIO"]:
+                    elif compression_ratio < settings_dict["MIN_ARCHIVE_RATIO"]:
                         logger.warning(
                             "MIN_ARCHIVE_RATIO: Skipped archive %s because compression ratio %.5f is less than MIN_ARCHIVE_RATIO %s",
                             file_path,
                             compression_ratio,
-                            settings["MIN_ARCHIVE_RATIO"],
+                            settings_dict["MIN_ARCHIVE_RATIO"],
                         )
                     elif (
                         shutil.disk_usage(self.extract_dir).free - extracted_size
-                        < settings["MIN_DISK_FREE_SPACE"]
+                        < settings_dict["MIN_DISK_FREE_SPACE"]
                     ):
                         logger.warning(
                             "MIN_DISK_FREE_SPACE:Skipped archive %s because extracting it would leave less than MIN_DISK_FREE_SPACE %s bytes free at extraction location %s",
                             file_path,
-                            settings["MIN_DISK_FREE_SPACE"],
+                            settings_dict["MIN_DISK_FREE_SPACE"],
                             self.extract_dir,
                         )
                     else:
@@ -235,7 +238,7 @@ class ArchiveExtractor:
         Returns:
             dict: Dictionary of default settings.
         """
-        return dict(default_settings)
+        return get_default_settings()
 
     def apply_settings(self, option_list: list[tuple[str, str]]) -> None:
         """Apply a list of settings options.

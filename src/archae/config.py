@@ -97,11 +97,37 @@ def apply_options(option_list: list[tuple[str, str]]) -> None:
             pass
 
 
-def convert_settings() -> None:
-    """Convert settings using their defined converters."""
+def convert_settings(settings_dict: dict) -> dict:
+    """Convert settings using their defined converters.
+
+    Args:
+        settings_dict (dict): The settings dictionary to convert.
+
+    Returns:
+        dict: The converted settings dictionary.
+    """
     options = get_options()
     for key in options:
         option_def = options[key]
-        if "converter" in option_def:
+        if "converter" in option_def and key in settings_dict:
             converter = get_converter(option_def["converter"])
-            settings[key] = converter(settings[key])
+            settings_dict[key] = converter(settings_dict[key])
+    return settings_dict
+
+
+def get_settings() -> dict:
+    """Get the current settings after converting them.
+
+    Returns:
+        dict: The current settings as a dictionary.
+    """
+    return convert_settings(dict(settings))
+
+
+def get_default_settings() -> dict:
+    """Get the default settings after converting them.
+
+    Returns:
+        dict: The default settings as a dictionary.
+    """
+    return convert_settings(dict(default_settings))

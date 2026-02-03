@@ -1,0 +1,51 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug CLI",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "archae",
+            "args": [
+                "extract",
+                "${workspaceFolder}/tests/samples/sample1.zip",
+                "-e",
+                "${workspaceFolder}/tests/output/launch/"
+            ],
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        },
+        {
+            "name": "Debug Module",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "archae",
+            "args": [
+                "extract",
+                "${workspaceFolder}/tests/samples/sample1.zip",
+                "-e",
+                "${workspaceFolder}/tests/output"
+            ],
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        },
+        {
+            "name": "Debug Tests",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": ["tests/test_module.py", "-v"],
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        }
+    ]
+}

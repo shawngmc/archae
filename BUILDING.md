@@ -45,6 +45,8 @@ nox -s cog
 
 ### Pushing to PyPi
 
+This is also done via GitHub Actions.
+
 ```
 nox -s release-to-pypi
 ```

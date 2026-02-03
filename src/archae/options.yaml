@@ -1,0 +1,39 @@
+MAX_TOTAL_SIZE_BYTES:
+  type: int
+  converter: archae.util.converter.file_size:convert
+  help: Maximum total size of all archives to extract in bytes.
+  examples:
+    - 1GB
+    - 500M
+    - 500
+MAX_ARCHIVE_SIZE_BYTES:
+  type: int
+  converter: archae.util.converter.file_size:convert
+  help: Maximum size of a single archive to extract in bytes.
+  examples:
+    - 1GB
+    - 500M
+    - 500
+MIN_ARCHIVE_RATIO:
+  type: float
+  converter: float
+  help: Minimum compression ratio (compressed size / uncompressed size) required to extract an archive.
+  examples:
+    - 0.001
+MIN_DISK_FREE_SPACE:
+  type: int
+  converter: archae.util.converter.file_size:convert
+  help: Minimum required estimated disk space after extraction in bytes.
+  examples:
+    - 1GB
+    - 500M
+    - 500
+MAX_DEPTH:
+  type: int
+  converter: int
+  help: Maximum extraction depth for nested archives. Usse 0 for unlimited depth.
+  examples:
+    - 3
+    - 5
+    - 10
+    - 0

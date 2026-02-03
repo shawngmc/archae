@@ -15,7 +15,6 @@ ALL_PYTHON_VERSIONS = [
     #     if (match := re.search(r"Programming Language :: Python :: (?P<version>3\.\d+)", line)) is not None:
     #         cog.outl(f'"{match.group("version")}",')
     # ]]]
-    "3.11",
     "3.12",
     "3.13",
     "3.14",

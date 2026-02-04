@@ -65,7 +65,7 @@ def cli() -> None:
 )
 def extract(
     archive_path: pathlib.Path,
-    options: list[tuple[str, str]] | None,
+    options: list[tuple[str, str | int | float | bool]] | None,
     extract_dir: pathlib.Path,
 ) -> None:
     """Extract and analyze an archive."""
@@ -170,6 +170,9 @@ def print_tracked_files(tracked_files: dict[str, dict]) -> None:
 def print_warnings(warnings: list[str]) -> None:
     """Print accumulated warnings for debugging purposes."""
     logger.info("------------------------------------------------")
+    if len(warnings) == 0:
+        logger.info("No warnings.")
+        return
     logger.info("Accumulated Warnings:")
     for warning in warnings:  # type: ignore[attr-defined]
         logger.info(warning)

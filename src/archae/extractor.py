@@ -34,6 +34,10 @@ class WarningAccumulator(logging.Handler):
             self.warnings.append(self.format(record))
         print(self.format(record))  # noqa: T201
 
+    def clear_warnings(self) -> None:
+        """Clear the accumulated warnings."""
+        self.warnings.clear()
+
 
 logger = logging.getLogger("archae")
 logger.setLevel(logging.INFO)
@@ -65,9 +69,11 @@ class ArchiveExtractor:
         Args:
             file_path (Path): The path to the file.
         """
-        self.__handle_file(file_path)
+        accumulator.clear_warnings()
+        self.file_tracker.reset_tracked_files()
+        self._handle_file(file_path)
 
-    def __handle_file(self, file_path: Path, depth: int = 1) -> None:
+    def _handle_file(self, file_path: Path, depth: int = 1) -> None:
         """Internal implementation of handle_file.
 
         Args:
@@ -77,6 +83,21 @@ class ArchiveExtractor:
         logger.info("Starting examination of file: %s", file_path)
 
         base_hash = self._sha256_hash_file(file_path)
+        self._track_file_metadata(base_hash, file_path)
+
+        is_file_archive = self._is_archive(base_hash)
+        self.file_tracker.add_metadata(base_hash, "is_archive", is_file_archive)
+
+        if is_file_archive:
+            self._process_archive(base_hash, file_path, depth)
+
+    def _track_file_metadata(self, base_hash: str, file_path: Path) -> None:
+        """Track file size and metadata including type, mime type, and extension.
+
+        Args:
+            base_hash (str): The SHA-256 hash of the file.
+            file_path (Path): The path to the file.
+        """
         file_size_bytes = file_path.stat().st_size
         self.file_tracker.track_file(base_hash, file_size_bytes)
         self.file_tracker.track_file_path(base_hash, file_path)
@@ -86,72 +107,142 @@ class ArchiveExtractor:
         )
         extension = file_path.suffix.lstrip(".").lower()
         self.file_tracker.add_metadata(base_hash, "extension", extension)
-        is_file_archive = self._is_archive(base_hash)
-        self.file_tracker.add_metadata(base_hash, "is_archive", is_file_archive)
-        if is_file_archive:
-            settings_dict = get_settings()
-            if settings_dict["MAX_DEPTH"] == 0 or depth < settings_dict["MAX_DEPTH"]:
-                archiver = self._get_archiver_for_file(base_hash)
-                if not archiver:
-                    logger.warning(
-                        "NO_ARCHIVER: No suitable archiver found for file: %s",
-                        file_path,
-                    )
-                    return
 
-                try:
-                    extracted_size = archiver.get_archive_uncompressed_size(file_path)
-                except RuntimeError as e:
-                    logger.warning(
-                        "SIZE_RETRIEVAL_FAILED: Could not retrieve size for archive %s: %s",
-                        file_path,
-                        str(e),
-                    )
-                    return
-                self.file_tracker.add_metadata(
-                    base_hash, "extracted_size", extracted_size
+    def _get_uncompressed_size(
+        self, file_path: Path, archiver: BaseArchiver
+    ) -> int | None:
+        """Retrieve the uncompressed size of an archive.
+
+        Args:
+            base_hash (str): The SHA-256 hash of the file.
+            file_path (Path): The path to the archive file.
+            archiver (BaseArchiver): The archiver to use for size retrieval.
+
+        Returns:
+            int | None: The uncompressed size in bytes, or None if retrieval failed.
+        """
+        try:
+            return archiver.get_archive_uncompressed_size(file_path)
+        except NotImplementedError:
+            logger.warning(
+                "SIZE_RETRIEVAL_FAILED: No archiver supports analysis for %s; extraction will continue",
+                file_path,
+            )
+        except RuntimeError as e:
+            logger.warning(
+                "SIZE_RETRIEVAL_FAILED: Could not retrieve size for archive %s: %s",
+                file_path,
+                str(e),
+            )
+        return None
+
+    def _process_archive(self, base_hash: str, file_path: Path, depth: int) -> None:
+        """Process an archive file: validate depth, retrieve size, and extract if appropriate.
+
+        Args:
+            base_hash (str): The SHA-256 hash of the archive file.
+            file_path (Path): The path to the archive file.
+            depth (int): The current depth in the archive extraction tree.
+        """
+        settings_dict = get_settings()
+
+        # Check if we've reached maximum depth
+        if settings_dict["MAX_DEPTH"] != 0 and depth >= settings_dict["MAX_DEPTH"]:
+            logger.warning(
+                "MAX_DEPTH: File %s is not extracted; max depth reached.", file_path
+            )
+            return
+
+        # Get the appropriate archiver for this file
+        archiver = self._get_archiver_for_file(base_hash)
+        if not archiver:
+            logger.warning(
+                "NO_ARCHIVER: No suitable archiver found for file: %s",
+                file_path,
+            )
+            return
+
+        # Retrieve archive size and calculate compression ratio
+        extracted_size = self._get_uncompressed_size(file_path, archiver)
+        if extracted_size is None:
+            return
+
+        self.file_tracker.add_metadata(base_hash, "extracted_size", extracted_size)
+        compression_ratio = (
+            extracted_size / self.file_tracker.get_file_size(base_hash)
+            if self.file_tracker.get_file_size(base_hash) > 0
+            else 0
+        )
+        self.file_tracker.add_metadata(
+            base_hash, "overall_compression_ratio", compression_ratio
+        )
+
+        # Check if extraction should proceed based on settings
+        if not self._should_extract_archive(base_hash, file_path):
+            return
+
+        # Extract the archive and process contained files
+        if not self._extract_archive(archiver, file_path, base_hash):
+            return
+
+        extraction_dir = self.extract_dir / base_hash
+        child_files = self._list_child_files(extraction_dir)
+        for child_file in child_files:
+            self._handle_file(child_file, depth + 1)
+
+        self._cleanup(file_path, base_hash)
+
+    def _extract_archive(
+        self, archiver: BaseArchiver, file_path: Path, base_hash: str
+    ) -> bool:
+        """Extract an archive file to the extraction directory.
+
+        Args:
+            archiver (BaseArchiver): The archiver to use for extraction.
+            file_path (Path): The path to the archive file.
+            base_hash (str): The SHA-256 hash of the archive file.
+
+        Returns:
+            bool: True if extraction succeeded, False otherwise.
+        """
+        try:
+            extraction_dir = self.extract_dir / base_hash
+            logger.info(
+                "Extracting archive %s to %s",
+                file_path,
+                extraction_dir,
+            )
+            archiver.extract_archive(file_path, extraction_dir)
+        except RuntimeError as e:
+            logger.warning(
+                "EXTRACTION_FAILED: Extraction failed for archive %s: %s",
+                file_path,
+                str(e),
+            )
+            return False
+        else:
+            return True
+
+    def _cleanup(self, file_path: Path, base_hash: str) -> None:
+        """Handle any cleanup actions such as deleting the archive if settings dictate.
+
+        Args:
+            file_path (Path): The path to the original archive file.
+            base_hash (str): The hash of the original archive file.
+        """
+        if self._should_delete_archive(base_hash, file_path):
+            try:
+                file_path.unlink()
+                self.file_tracker.add_metadata(base_hash, "deleted", True)  # noqa: FBT003
+                logger.info(
+                    "Deleted archive %s after extraction as per settings.",
+                    file_path,
                 )
-                compression_ratio = extracted_size / file_size_bytes
-                self.file_tracker.add_metadata(
-                    base_hash, "overall_compression_ratio", compression_ratio
-                )
-
-                if self.__should_extract_archive(base_hash, file_path):
-                    try:
-                        extraction_dir = self.extract_dir / base_hash
-                        logger.info(
-                            "Extracting archive %s to %s",
-                            file_path,
-                            extraction_dir,
-                        )
-                        archiver.extract_archive(file_path, extraction_dir)
-                    except RuntimeError as e:
-                        logger.warning(
-                            "EXTRACTION_FAILED: Extraction failed for archive %s: %s",
-                            file_path,
-                            str(e),
-                        )
-                        return
-                    child_files = self._list_child_files(extraction_dir)
-                    for child_file in child_files:
-                        self.__handle_file(child_file, depth + 1)
-
-                    if self.__should_delete_archive(base_hash, file_path):
-                        try:
-                            file_path.unlink()
-                            logger.info(
-                                "Deleted archive %s after extraction as per settings.",
-                                file_path,
-                            )
-                        except (PermissionError, OSError) as e:
-                            logger.warning(
-                                "DELETE_FAILED: Could not delete archive %s after extraction: %s",
-                                file_path,
-                                str(e),
-                            )
-            else:
+            except (PermissionError, OSError) as e:
                 logger.warning(
-                    "MAX_DEPTH: File %s is not extracted; max depth reached.", file_path
+                    "DELETE_FAILED: Could not delete archive %s after extraction: %s",
+                    file_path,
+                    str(e),
                 )
 
     def _is_archive(self, file_hash: str) -> bool:
@@ -241,18 +332,20 @@ class ArchiveExtractor:
         """
         return get_default_settings()
 
-    def apply_settings(self, option_list: list[tuple[str, str]]) -> None:
+    def apply_settings(
+        self, option_list: list[tuple[str, str | int | float | bool]]
+    ) -> None:
         """Apply a list of settings options.
 
         Args:
-            option_list (list[tuple[str, str]]): List of (key, value) tuples to apply.
+            option_list (list[tuple[str, str | int | float | bool]]): List of (key, value) tuples to apply.
 
         Example:
             extractor.apply_settings([("MAX_ARCHIVE_SIZE_BYTES", "5000000000")])
         """
         apply_options(option_list)
 
-    def __should_extract_archive(self, file_hash: str, file_path: Path) -> bool:
+    def _should_extract_archive(self, file_hash: str, file_path: Path) -> bool:
         """Determine whether an archive should be extracted based on its metadata and current settings."""
         settings_dict = get_settings()
         metadata = self.file_tracker.get_file_metadata(file_hash)
@@ -298,7 +391,7 @@ class ArchiveExtractor:
             return False
         return True
 
-    def __should_delete_archive(self, file_hash: str, file_path: Path) -> bool:
+    def _should_delete_archive(self, file_hash: str, file_path: Path) -> bool:
         """Determine whether an archive should be deleted after extraction based on its metadata and current settings."""
         settings_dict = get_settings()
         if not settings_dict["DELETE_ARCHIVES_AFTER_EXTRACTION"]:

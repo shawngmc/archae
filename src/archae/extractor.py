@@ -101,6 +101,11 @@ class ArchiveExtractor:
 
                 try:
                     extracted_size = archiver.get_archive_uncompressed_size(file_path)
+                except NotImplementedError:
+                    logger.warning(
+                        "SIZE_RETRIEVAL_FAILED: Could not retrieve size for because no archiver supports analysis for %s; extraction will continue",
+                        file_path,
+                    )
                 except RuntimeError as e:
                     logger.warning(
                         "SIZE_RETRIEVAL_FAILED: Could not retrieve size for archive %s: %s",
@@ -111,7 +116,11 @@ class ArchiveExtractor:
                 self.file_tracker.add_metadata(
                     base_hash, "extracted_size", extracted_size
                 )
-                compression_ratio = extracted_size / file_size_bytes
+                compression_ratio = (
+                    extracted_size / self.file_tracker.get_file_size(base_hash)
+                    if self.file_tracker.get_file_size(base_hash) > 0
+                    else 0
+                )
                 self.file_tracker.add_metadata(
                     base_hash, "overall_compression_ratio", compression_ratio
                 )
@@ -136,22 +145,26 @@ class ArchiveExtractor:
                     for child_file in child_files:
                         self.__handle_file(child_file, depth + 1)
 
-                    if self.__should_delete_archive(base_hash, file_path):
-                        try:
-                            file_path.unlink()
-                            logger.info(
-                                "Deleted archive %s after extraction as per settings.",
-                                file_path,
-                            )
-                        except (PermissionError, OSError) as e:
-                            logger.warning(
-                                "DELETE_FAILED: Could not delete archive %s after extraction: %s",
-                                file_path,
-                                str(e),
-                            )
+                    self.__cleanup(file_path, base_hash)
             else:
                 logger.warning(
                     "MAX_DEPTH: File %s is not extracted; max depth reached.", file_path
+                )
+
+    def __cleanup(self, file_path: Path, base_hash: str) -> None:
+        """Handle any cleanup actions such as deleting the archive if settings dictate."""
+        if self.__should_delete_archive(base_hash, file_path):
+            try:
+                file_path.unlink()
+                logger.info(
+                    "Deleted archive %s after extraction as per settings.",
+                    file_path,
+                )
+            except (PermissionError, OSError) as e:
+                logger.warning(
+                    "DELETE_FAILED: Could not delete archive %s after extraction: %s",
+                    file_path,
+                    str(e),
                 )
 
     def _is_archive(self, file_hash: str) -> bool:

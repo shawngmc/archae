@@ -8,8 +8,26 @@ The **first number** of the version is the year.
 The **second number** is incremented with each release, starting at 1 for each year.
 The **third number** is for emergencies when we need to start branches for older releases.
 
+## 2026.4
+
+- Removed PeaZip - CLI syntax is not well-documented, adds few formats
+    - Loses ZStandard (.zst application/zstd) and Brotli (.br application/x-brotli)
+- Fix to allow Unar to run
+
 ## 2026.3
 
 - Fix version numbering
 - Add delete-after-extraction
 - Various fixes
+
+## TODOs
+
+- Programmatic list of warning prefixes
+- Improve archive type detection
+- Separate between extractable and non-extractable archive types - started, but needs a bit more refinement
+- Detect password-protected archives
+- Allow supplying archive passwords by hash
+- Add custom magic to detect obscure archive formats
+- Add Brotli: .br / application/x-brotli
+- Add ZStandard: .zst / application/zstd
+- Enforce archiver orderering (7z > unar, since 7z can analyze w/o extraction)

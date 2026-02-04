@@ -25,7 +25,7 @@ Every once and a while, I run into an issue: multiple layers of archives. The re
 
 ## Features
 
-- Uses 7z/peazip/unar (not 7za/7zr) to try to extract archives
+- Uses 7z/unar to try to extract archives
 - No substantial limit on the number of archive layers
 - Identifies file types via libmagic
 - Detects duplicate archives
@@ -97,13 +97,3 @@ archae --help
 <!-- [[[end]]] -->
 
 <!-- end docs-include-usage -->
-
-## TODOs
-
-- More archive bomb protections
-    - delete_archives_as_exploded - remove archive files to reduce duplication (boolean)
-- Improve archive type detection
-- Separate between extractable and non-extractable archive types
-- Detect password-protected archives
-- Allow supplying archive passwords by hash
-- Add custom magic to detect obscure archive formats

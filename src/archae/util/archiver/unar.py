@@ -153,7 +153,7 @@ class UnarArchiver(BaseArchiver):
             )
             raise RuntimeError(msg) from e
 
-    def get_archive_uncompressed_size(self, archive_path: Path) -> int:  # noqa: ARG002
+    def get_archive_uncompressed_size(self, archive_path: Path) -> int:
         """Get the uncompressed size of the contents.
 
         Args:
@@ -162,4 +162,5 @@ class UnarArchiver(BaseArchiver):
         Returns:
             int: The size of the contents
         """
-        return -1
+        msg = "unar does not support getting uncompressed size of archive contents."
+        raise NotImplementedError(msg)

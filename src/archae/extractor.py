@@ -152,7 +152,12 @@ class ArchiveExtractor:
                 )
 
     def __cleanup(self, file_path: Path, base_hash: str) -> None:
-        """Handle any cleanup actions such as deleting the archive if settings dictate."""
+        """Handle any cleanup actions such as deleting the archive if settings dictate.
+
+        Args:
+            file_path (Path): The path to the original archive file.
+            base_hash (str): The hash of the original archive file.
+        """
         if self.__should_delete_archive(base_hash, file_path):
             try:
                 file_path.unlink()

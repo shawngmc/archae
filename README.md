@@ -20,8 +20,8 @@ Archae explodes archives.
 Every once and a while, I run into an issue: multiple layers of archives. The reasons vary, but examples would include:
 
 - Searching for something in a ZIP of folders that contained a ZIP with a CD image in it
-- Running a malware scan and finding an obscure archive format was missed and not even flagged
-  Meanwhile, I want to make sure I don't fill my disk, especially if an archive bomb (more commonly known as a ZIP bomb) has been jammed in somewhere. They're only funny the first time. :D
+- Running a malware scan and finding an obscure archive format was missed and not even flagged.
+- Meanwhile, I want to make sure I don't fill my disk, especially if an archive bomb (more commonly known as a ZIP bomb) has been jammed in somewhere. They're only funny the first time. :D
 
 ## Features
 
@@ -35,6 +35,7 @@ Every once and a while, I run into an issue: multiple layers of archives. The re
     - MIN_ARCHIVE_RATIO - ensures very-high-compression-ratio archives are stopped
     - MIN_DISK_FREE_SPACE - minimum free space at the extraction location
     - MAX_DEPTH - allow setting a maximum archive depth to traverse
+    - DELETE_ARCHIVES_AFTER_EXTRACTION - delete pure archive types after deletion
 
 ## Installation
 

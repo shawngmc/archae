@@ -31,6 +31,18 @@ def test_run_as_executable() -> None:
     assert result.exit_code == 0
 
 
+def test_status() -> None:
+    """Does the `status` command run successfully?"""
+    result = run_command_in_shell("archae status")
+    assert result.exit_code == 0
+
+
+def test_listopts() -> None:
+    """Does the `listopts` command run successfully?"""
+    result = run_command_in_shell("archae listopts")
+    assert result.exit_code == 0
+
+
 def test_version_runner(runner: CliRunner) -> None:
     """Does `--version` display the correct version?"""
     result = runner.invoke(cli, ["--version"])

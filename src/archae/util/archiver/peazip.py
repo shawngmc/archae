@@ -31,7 +31,7 @@ class PeazipArchiver(BaseArchiver):
         "chi",
         "chq",
         "pptx",
-        "pptm ",
+        "pptm",
         "xlsx",
         "xlsm",
         "docx",
@@ -145,7 +145,14 @@ class PeazipArchiver(BaseArchiver):
             str(archive_path),
             str(extract_dir),
         ]
-        subprocess.run(command, check=True)  # noqa: S603
+        try:
+            subprocess.run(command, check=True, capture_output=True, text=True)  # noqa: S603
+        except subprocess.CalledProcessError as e:
+            msg = (
+                f"PeaZip extraction failed for archive {archive_path} "
+                f"with exit code {e.returncode}: {e.stderr}"
+            )
+            raise RuntimeError(msg) from e
 
     def get_archive_uncompressed_size(self, archive_path: Path) -> int:  # noqa: ARG002
         """Get the uncompressed size of the contents.

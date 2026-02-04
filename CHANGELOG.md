@@ -8,8 +8,8 @@ The **first number** of the version is the year.
 The **second number** is incremented with each release, starting at 1 for each year.
 The **third number** is for emergencies when we need to start branches for older releases.
 
-## Unreleased
+## 2026.3
 
-### Added
-
-- Initial release of Archae
+- Fix version numbering
+- Add delete-after-extraction
+- Various fixes

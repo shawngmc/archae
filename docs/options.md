@@ -113,6 +113,38 @@ for option_name in sorted(options.keys()):
 - `500M`
 - `500`
 
+## DELETE_ARCHIVES_AFTER_EXTRACTION
+
+**Type:** bool
+
+**Description:** Whether to delete archives after extraction.
+
+**Default:** `False`
+
+**Converter:** bool
+
+**Examples:**
+
+- `True`
+- `False`
+
+## MAX_DEPTH
+
+**Type:** int
+
+**Description:** Maximum extraction depth for nested archives. Use 0 for unlimited depth.
+
+**Default:** `0`
+
+**Converter:** int
+
+**Examples:**
+
+- `3`
+- `5`
+- `10`
+- `0`
+
 <!-- [[[end]]] -->
 
 ## Setting Configuration Options
@@ -146,15 +178,15 @@ archae --max_archive_size_bytes=5000000000 --min_archive_ratio=0.01 archive.zip
 
 ### Programmatically
 
-When using Archae as a library, use the `apply_settings()` method:
+When using Archae as a library, use the `apply_options()` method:
 
 ```python
 from archae import ArchiveExtractor
 
 extractor = ArchiveExtractor()
-extractor.apply_settings([
-    ("MAX_ARCHIVE_SIZE_BYTES", "5000000000"),
-    ("MIN_ARCHIVE_RATIO", "0.01")
-])
+extractor.apply_options({
+    "MAX_ARCHIVE_SIZE_BYTES": 5000000000,
+    "MIN_ARCHIVE_RATIO": 0.01
+})
 extractor.handle_file(Path("archive.zip"))
 ```

@@ -1,5 +1,7 @@
 """Archae explodes archives."""
 
+from archae.config import option_keys
 from archae.extractor import ArchiveExtractor
 
-__all__ = ["ArchiveExtractor"]
+Options = option_keys()
+__all__ = ["ArchiveExtractor", "Options"]

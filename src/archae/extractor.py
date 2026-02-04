@@ -65,9 +65,9 @@ class ArchiveExtractor:
         Args:
             file_path (Path): The path to the file.
         """
-        self.__handle_file(file_path)
+        self._handle_file(file_path)
 
-    def __handle_file(self, file_path: Path, depth: int = 1) -> None:
+    def _handle_file(self, file_path: Path, depth: int = 1) -> None:
         """Internal implementation of handle_file.
 
         Args:
@@ -102,7 +102,9 @@ class ArchiveExtractor:
         extension = file_path.suffix.lstrip(".").lower()
         self.file_tracker.add_metadata(base_hash, "extension", extension)
 
-    def _get_archive_size(self, file_path: Path, archiver: BaseArchiver) -> int | None:
+    def _get_uncompressed_size(
+        self, file_path: Path, archiver: BaseArchiver
+    ) -> int | None:
         """Retrieve the uncompressed size of an archive.
 
         Args:
@@ -155,7 +157,7 @@ class ArchiveExtractor:
             return
 
         # Retrieve archive size and calculate compression ratio
-        extracted_size = self._get_archive_size(file_path, archiver)
+        extracted_size = self._get_uncompressed_size(file_path, archiver)
         if extracted_size is None:
             return
 
@@ -180,7 +182,7 @@ class ArchiveExtractor:
         extraction_dir = self.extract_dir / base_hash
         child_files = self._list_child_files(extraction_dir)
         for child_file in child_files:
-            self.__handle_file(child_file, depth + 1)
+            self._handle_file(child_file, depth + 1)
 
         self._cleanup(file_path, base_hash)
 
@@ -225,6 +227,7 @@ class ArchiveExtractor:
         if self._should_delete_archive(base_hash, file_path):
             try:
                 file_path.unlink()
+                self.file_tracker.add_metadata(base_hash, "deleted", True)  # noqa: FBT003
                 logger.info(
                     "Deleted archive %s after extraction as per settings.",
                     file_path,

@@ -16,6 +16,7 @@ The **third number** is for emergencies when we need to start branches for older
 - Fix: Fixed bug blocking unar due to lack of size analysis code
 - Misc: Internal logic cleanup
 - Metadata: Tracks archive files deleted
+- Tests: Vastly improved unit test coverage for options
 
 ## 2026.3
 

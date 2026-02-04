@@ -10,9 +10,12 @@ The **third number** is for emergencies when we need to start branches for older
 
 ## 2026.4
 
-- Removed PeaZip - CLI syntax is not well-documented, adds few formats
+- Archivers: Removed PeaZip - CLI syntax is not well-documented, adds few formats
     - Loses ZStandard (.zst application/zstd) and Brotli (.br application/x-brotli)
-- Fix to allow Unar to run
+- CLI: Clean 'No Warnings' message
+- Fix: Fixed bug blocking unar due to lack of size analysis code
+- Misc: Internal logic cleanup
+- Metadata: Tracks archive files deleted
 
 ## 2026.3
 

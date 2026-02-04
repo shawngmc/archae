@@ -46,7 +46,7 @@ class SevenZipArchiver(BaseArchiver):
         "zip",
         "zipx",
         "appimage",
-        "dmg ",
+        "dmg",
         "img",
         "arj",
         "cpio",
@@ -176,7 +176,14 @@ class SevenZipArchiver(BaseArchiver):
             str(archive_path),
             f"-o{extract_dir!s}",
         ]
-        subprocess.run(command, check=True)  # noqa: S603
+        try:
+            subprocess.run(command, check=True, capture_output=True, text=True)  # noqa: S603
+        except subprocess.CalledProcessError as e:
+            msg = (
+                f"7zip extraction failed for archive {archive_path} "
+                f"with exit code {e.returncode}: {e.stderr}"
+            )
+            raise RuntimeError(msg) from e
 
     def get_archive_uncompressed_size(self, archive_path: Path) -> int:
         """Get the uncompressed size of the contents.
@@ -188,7 +195,14 @@ class SevenZipArchiver(BaseArchiver):
             int: The size of the contents
         """
         command: list[str] = [str(self.executable_path), "l", "-slt", str(archive_path)]
-        result = subprocess.run(command, check=True, capture_output=True, text=True)  # noqa: S603
+        try:
+            result = subprocess.run(command, check=True, capture_output=True, text=True)  # noqa: S603
+        except subprocess.CalledProcessError as e:
+            msg = (
+                f"7zip size retrieval failed for archive {archive_path} "
+                f"with exit code {e.returncode}: {e.stderr}"
+            )
+            raise RuntimeError(msg) from e
 
         result_lines = str(result.stdout).splitlines()
         exploded_size = 0

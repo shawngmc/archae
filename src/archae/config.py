@@ -1,5 +1,6 @@
 """Runtime config management (default, userconfig and envvars)."""
 
+import ast
 import importlib
 import typing
 from pathlib import Path
@@ -66,6 +67,8 @@ def get_converter(converter_def: str) -> typing.Callable:
         return float
     if converter_def == "int":
         return int
+    if converter_def == "bool":
+        return ast.literal_eval
 
     # Split the definition into module path and class name
     module_name, class_name = converter_def.split(":")

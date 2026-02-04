@@ -35,6 +35,7 @@ Every once and a while, I run into an issue: multiple layers of archives. The re
     - MIN_ARCHIVE_RATIO - ensures very-high-compression-ratio archives are stopped
     - MIN_DISK_FREE_SPACE - minimum free space at the extraction location
     - MAX_DEPTH - allow setting a maximum archive depth to traverse
+    - DELETE_ARCHIVES_AFTER_EXTRACTION - delete pure archive types after deletion
 
 ## Installation
 

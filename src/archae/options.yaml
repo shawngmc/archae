@@ -37,3 +37,10 @@ MAX_DEPTH:
     - 5
     - 10
     - 0
+DELETE_ARCHIVES_AFTER_EXTRACTION:
+  type: bool
+  converter: bool
+  help: Whether to delete archives after extraction.
+  examples:
+    - True
+    - False

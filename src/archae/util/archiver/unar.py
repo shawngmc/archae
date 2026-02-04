@@ -24,9 +24,9 @@ class UnarArchiver(BaseArchiver):
         "deb",
         "cab",
         "pptx",
-        "pptm ",
-        "xlsx ",
+        "pptm",
         "xlsm",
+        "xlsx",
         "docx",
         "docm",
         "7z",
@@ -144,7 +144,14 @@ class UnarArchiver(BaseArchiver):
             str(extract_dir),
             str(archive_path),
         ]
-        subprocess.run(command, check=True)  # noqa: S603
+        try:
+            subprocess.run(command, check=True, capture_output=True, text=True)  # noqa: S603
+        except subprocess.CalledProcessError as e:
+            msg = (
+                f"unar extraction failed for archive {archive_path} "
+                f"with exit code {e.returncode}: {e.stderr}"
+            )
+            raise RuntimeError(msg) from e
 
     def get_archive_uncompressed_size(self, archive_path: Path) -> int:  # noqa: ARG002
         """Get the uncompressed size of the contents.

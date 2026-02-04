@@ -39,7 +39,18 @@ class FileTracker:
         """
         return file_hash in self.tracked_files
 
-    def get_tracked_file_metadata(self, file_hash: str) -> dict:
+    def get_file_size(self, file_hash: str) -> int:
+        """Get the size for a tracked file by its hash.
+
+        Args:
+            file_hash (str): The hash of the file.
+
+        Returns:
+            int: The size of the tracked file.
+        """
+        return self.tracked_files.get(file_hash, {}).get("size", 0)
+
+    def get_file_metadata(self, file_hash: str) -> dict:
         """Get metadata for a tracked file by its hash.
 
         Args:
@@ -63,7 +74,7 @@ class FileTracker:
         if file_path not in self.tracked_files[file_hash]["paths"]:
             self.tracked_files[file_hash]["paths"].append(file_path)
 
-    def add_metadata_to_hash(self, file_hash: str, key: str, value: Any) -> None:
+    def add_metadata(self, file_hash: str, key: str, value: Any) -> None:
         """Add metadata to a tracked file.
 
         Args:
@@ -73,7 +84,7 @@ class FileTracker:
         """
         self.tracked_files[file_hash]["metadata"][key] = value
 
-    def get_tracked_file_size(self) -> int:
+    def get_total_tracked_file_size(self) -> int:
         """Get the total size of all tracked files.
 
         Returns:

@@ -65,7 +65,7 @@ def cli() -> None:
 )
 def extract(
     archive_path: pathlib.Path,
-    options: list[tuple[str, str]] | None,
+    options: list[tuple[str, str | int | float | bool]] | None,
     extract_dir: pathlib.Path,
 ) -> None:
     """Extract and analyze an archive."""

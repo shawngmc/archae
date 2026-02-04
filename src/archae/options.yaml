@@ -31,7 +31,7 @@ MIN_DISK_FREE_SPACE:
 MAX_DEPTH:
   type: int
   converter: int
-  help: Maximum extraction depth for nested archives. Usse 0 for unlimited depth.
+  help: Maximum extraction depth for nested archives. Use 0 for unlimited depth.
   examples:
     - 3
     - 5

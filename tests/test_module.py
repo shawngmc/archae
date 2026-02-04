@@ -17,7 +17,7 @@ def test_module_max_depth_warn() -> None:
     )
     Path.mkdir(extract_path, parents=True, exist_ok=True)
     extractor = ArchiveExtractor(extract_dir=extract_path)
-    extractor.apply_settings([("MAX_DEPTH", 2)])
+    extractor.apply_options({"MAX_DEPTH": 2})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
     assert any("MAX_DEPTH:" in warning for warning in warnings)
@@ -29,7 +29,7 @@ def test_module_max_depth_ok() -> None:
     )
     Path.mkdir(extract_path, parents=True, exist_ok=True)
     extractor = ArchiveExtractor(extract_dir=extract_path)
-    extractor.apply_settings([("MAX_DEPTH", 5)])
+    extractor.apply_options({"MAX_DEPTH": 5})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
     assert not any("MAX_DEPTH:" in warning for warning in warnings)
@@ -41,7 +41,7 @@ def test_total_bytes_warn() -> None:
     )
     Path.mkdir(extract_path, parents=True, exist_ok=True)
     extractor = ArchiveExtractor(extract_dir=extract_path)
-    extractor.apply_settings([("MAX_TOTAL_SIZE_BYTES", 100)])
+    extractor.apply_options({"MAX_TOTAL_SIZE_BYTES": 100})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
     assert any("MAX_TOTAL_SIZE_BYTES:" in warning for warning in warnings)
@@ -53,7 +53,7 @@ def test_total_bytes_ok() -> None:
     )
     Path.mkdir(extract_path, parents=True, exist_ok=True)
     extractor = ArchiveExtractor(extract_dir=extract_path)
-    extractor.apply_settings([("MAX_TOTAL_SIZE_BYTES", "10G")])
+    extractor.apply_options({"MAX_TOTAL_SIZE_BYTES": "10G"})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
     assert not any("MAX_TOTAL_SIZE_BYTES:" in warning for warning in warnings)
@@ -67,7 +67,7 @@ def test_compression_ratio_warn() -> None:
     )
     Path.mkdir(extract_path, parents=True, exist_ok=True)
     extractor = ArchiveExtractor(extract_dir=extract_path)
-    extractor.apply_settings([("MIN_ARCHIVE_RATIO", 0.999)])
+    extractor.apply_options({"MIN_ARCHIVE_RATIO": 0.999})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
     assert any("MIN_ARCHIVE_RATIO:" in warning for warning in warnings)
@@ -79,7 +79,7 @@ def test_compression_ratio_ok() -> None:
     )
     Path.mkdir(extract_path, parents=True, exist_ok=True)
     extractor = ArchiveExtractor(extract_dir=extract_path)
-    extractor.apply_settings([("MIN_ARCHIVE_RATIO", 0.001)])
+    extractor.apply_options({"MIN_ARCHIVE_RATIO": 0.001})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
     assert not any("MIN_ARCHIVE_RATIO:" in warning for warning in warnings)
@@ -91,7 +91,7 @@ def test_uncompressed_max_warn() -> None:
     )
     Path.mkdir(extract_path, parents=True, exist_ok=True)
     extractor = ArchiveExtractor(extract_dir=extract_path)
-    extractor.apply_settings([("MAX_ARCHIVE_SIZE_BYTES", 10)])
+    extractor.apply_options({"MAX_ARCHIVE_SIZE_BYTES": 10})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
     assert any("MAX_ARCHIVE_SIZE_BYTES:" in warning for warning in warnings)
@@ -103,7 +103,7 @@ def test_uncompressed_max_ok() -> None:
     )
     Path.mkdir(extract_path, parents=True, exist_ok=True)
     extractor = ArchiveExtractor(extract_dir=extract_path)
-    extractor.apply_settings([("MAX_ARCHIVE_SIZE_BYTES", "10G")])
+    extractor.apply_options({"MAX_ARCHIVE_SIZE_BYTES": "10G"})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
     assert not any("MAX_ARCHIVE_SIZE_BYTES:" in warning for warning in warnings)
@@ -113,7 +113,7 @@ def test_disk_free_warn() -> None:
     extract_path = Path(__file__).resolve().parent / "output" / "test_disk_free_warn"
     Path.mkdir(extract_path, parents=True, exist_ok=True)
     extractor = ArchiveExtractor(extract_dir=extract_path)
-    extractor.apply_settings([("MIN_DISK_FREE_SPACE", "10P")])
+    extractor.apply_options({"MIN_DISK_FREE_SPACE": "10P"})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
     assert any("MIN_DISK_FREE_SPACE:" in warning for warning in warnings)
@@ -123,7 +123,7 @@ def test_disk_free_ok() -> None:
     extract_path = Path(__file__).resolve().parent / "output" / "test_disk_free_ok"
     Path.mkdir(extract_path, parents=True, exist_ok=True)
     extractor = ArchiveExtractor(extract_dir=extract_path)
-    extractor.apply_settings([("MIN_DISK_FREE_SPACE", 10)])
+    extractor.apply_options({"MIN_DISK_FREE_SPACE": 10})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
     assert not any("MIN_DISK_FREE_SPACE:" in warning for warning in warnings)
@@ -133,7 +133,7 @@ def test_delete() -> None:
     extract_path = Path(__file__).resolve().parent / "output" / "test_delete"
     Path.mkdir(extract_path, parents=True, exist_ok=True)
     extractor = ArchiveExtractor(extract_dir=extract_path)
-    extractor.apply_settings([("DELETE_ARCHIVES_AFTER_EXTRACTION", "True")])
+    extractor.apply_options({"DELETE_ARCHIVES_AFTER_EXTRACTION": "True"})
     temp_zip_path = extract_path / "sample1.zip"
     shutil.copy(
         Path(__file__).resolve().parent / "samples" / "sample1.zip", temp_zip_path
@@ -146,7 +146,7 @@ def test_no_delete() -> None:
     extract_path = Path(__file__).resolve().parent / "output" / "test_no_delete"
     Path.mkdir(extract_path, parents=True, exist_ok=True)
     extractor = ArchiveExtractor(extract_dir=extract_path)
-    extractor.apply_settings([("DELETE_ARCHIVES_AFTER_EXTRACTION", "False")])
+    extractor.apply_options({"DELETE_ARCHIVES_AFTER_EXTRACTION": "False"})
     temp_zip_path = extract_path / "sample1.zip"
     shutil.copy(
         Path(__file__).resolve().parent / "samples" / "sample1.zip", temp_zip_path

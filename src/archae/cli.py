@@ -71,7 +71,7 @@ def extract(
     """Extract and analyze an archive."""
     # Apply any options from the command line, then convert any convertible settings
     if options:
-        apply_options(options)
+        apply_options(dict(options))
 
     # Locate external tools
     ToolManager.locate_tools()

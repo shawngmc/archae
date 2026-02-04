@@ -115,18 +115,18 @@ defaults = extractor.get_default_settings()
 print(f"Default max archive size: {defaults['MAX_ARCHIVE_SIZE_BYTES']}")
 ```
 
-##### `apply_settings(option_list: list[tuple[str, str]])`
+##### `apply_options(option_list: dict[str, str | int | float | bool]])`
 
-Apply a list of settings options as (key, value) tuples.
+Apply a dict of settings options.
 
 **Parameters:**
 
-- `option_list`: List of (key, value) tuples to apply
+- `option_list`: Dictionary of options to apply
 
 **Example:**
 
 ```python
-extractor.apply_settings([
+extractor.apply_options([
     ("MAX_ARCHIVE_SIZE_BYTES", "5000000000"),
     ("MIN_ARCHIVE_RATIO", "0.01")
 ])

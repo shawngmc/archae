@@ -80,15 +80,15 @@ def get_converter(converter_def: str) -> typing.Callable:
     return getattr(module, class_name)
 
 
-def apply_options(option_list: list[tuple[str, str | int | float | bool]]) -> None:
-    """Apply a list of options to the settings.
+def apply_options(option_list: dict[str, str | int | float | bool]) -> None:
+    """Apply a dict of options to the current settings.
 
     Args:
-        option_list (list[tuple[str, str | int | float | bool]]): List of key-value pairs to apply.
+        option_list (dict[str, str | int | float | bool]): Dictionary of options to apply.
 
     """
     options = get_options()
-    for key, value in option_list:
+    for key, value in option_list.items():
         # Find the option definition by matching the key
         option_def = None
         for def_key in options:
@@ -134,3 +134,13 @@ def get_default_settings() -> dict:
         dict: The default settings as a dictionary.
     """
     return convert_settings(dict(default_settings))
+
+
+def option_keys() -> list[str]:
+    """Get a list of all available option keys.
+
+    Returns:
+        list[str]: List of option keys.
+    """
+    options = get_options()
+    return list(options.keys())

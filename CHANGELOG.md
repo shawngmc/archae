@@ -8,6 +8,11 @@ The **first number** of the version is the year.
 The **second number** is incremented with each release, starting at 1 for each year.
 The **third number** is for emergencies when we need to start branches for older releases.
 
+## 2026.5
+
+- Module: Add convenience function to get options list
+- Module: Add cleaner dict-based option setter
+
 ## 2026.4
 
 - Archivers: Removed PeaZip - CLI syntax is not well-documented, adds few formats

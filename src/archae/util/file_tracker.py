@@ -102,3 +102,7 @@ class FileTracker:
             dict[str, dict]: The tracked files dictionary.
         """
         return copy.deepcopy(self.tracked_files)
+
+    def reset_tracked_files(self) -> None:
+        """Reset the tracked files."""
+        self.tracked_files = {}

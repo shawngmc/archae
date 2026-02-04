@@ -34,6 +34,10 @@ class WarningAccumulator(logging.Handler):
             self.warnings.append(self.format(record))
         print(self.format(record))  # noqa: T201
 
+    def clear_warnings(self) -> None:
+        """Clear the accumulated warnings."""
+        self.warnings.clear()
+
 
 logger = logging.getLogger("archae")
 logger.setLevel(logging.INFO)
@@ -65,6 +69,8 @@ class ArchiveExtractor:
         Args:
             file_path (Path): The path to the file.
         """
+        accumulator.clear_warnings()
+        self.file_tracker.reset_tracked_files()
         self._handle_file(file_path)
 
     def _handle_file(self, file_path: Path, depth: int = 1) -> None:

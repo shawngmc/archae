@@ -14,6 +14,7 @@ The **third number** is for emergencies when we need to start branches for older
     - Loses ZStandard (.zst application/zstd) and Brotli (.br application/x-brotli)
 - CLI: Clean 'No Warnings' message
 - Fix: Fixed bug blocking unar due to lack of size analysis code
+- Fix: Allow non-str options that failed in some circumstances
 - Misc: Internal logic cleanup
 - Metadata: Tracks archive files deleted
 - Tests: Vastly improved unit test coverage for options

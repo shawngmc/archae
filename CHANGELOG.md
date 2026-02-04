@@ -11,7 +11,8 @@ The **third number** is for emergencies when we need to start branches for older
 ## 2026.5
 
 - Module: Add convenience function to get options list
-- Module: Add cleaner dict-based option setter
+- Module: Change apply_settings to apply_options
+- Module: Make all apply_options use a dictionary
 
 ## 2026.4
 

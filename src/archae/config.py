@@ -80,11 +80,11 @@ def get_converter(converter_def: str) -> typing.Callable:
     return getattr(module, class_name)
 
 
-def apply_options(option_list: list[tuple[str, str]]) -> None:
+def apply_options(option_list: list[tuple[str, str | int | float | bool]]) -> None:
     """Apply a list of options to the settings.
 
     Args:
-        option_list (list[tuple[str, str]]): List of key-value pairs to apply.
+        option_list (list[tuple[str, str | int | float | bool]]): List of key-value pairs to apply.
 
     """
     options = get_options()

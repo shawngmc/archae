@@ -332,11 +332,13 @@ class ArchiveExtractor:
         """
         return get_default_settings()
 
-    def apply_settings(self, option_list: list[tuple[str, str]]) -> None:
+    def apply_settings(
+        self, option_list: list[tuple[str, str | int | float | bool]]
+    ) -> None:
         """Apply a list of settings options.
 
         Args:
-            option_list (list[tuple[str, str]]): List of (key, value) tuples to apply.
+            option_list (list[tuple[str, str | int | float | bool]]): List of (key, value) tuples to apply.
 
         Example:
             extractor.apply_settings([("MAX_ARCHIVE_SIZE_BYTES", "5000000000")])

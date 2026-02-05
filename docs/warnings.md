@@ -4,7 +4,7 @@ This page documents important warnings and considerations when using Archae.
 
 ## Warning Codes
 
-When Archae encounters issues during operation, it logs warnings with specific codes. These codes help identify the root cause of extraction or processing issues.
+When Archae encounters issues during operation, it logs warnings with specific codes. These codes help identify the root cause of extraction or processing issues, and can also help understand if the extraction result is suitable for your purposes. These are available via the 'WarningTypes' off the archae module.
 
 ### DELETION_FAILED
 

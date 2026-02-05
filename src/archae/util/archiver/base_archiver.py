@@ -46,8 +46,8 @@ class BaseArchiver(ABC):
         """
 
     @abstractmethod
-    def get_archive_uncompressed_size(self, archive_path: Path) -> int:
-        """Get the uncompressed size of the contents.
+    def analyze_archive(self, archive_path: Path) -> dict:
+        """Get various metadata about the archive, including number of encrypted files.
 
         Args:
             archive_path (Path): The path to the archive file.

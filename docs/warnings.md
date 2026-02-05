@@ -20,7 +20,7 @@ When Archae encounters issues during operation, it logs warnings with specific c
 
 **Details:** The extraction tool encountered an error while attempting to decompress the archive. This could be due to corruption, unsupported compression format, or insufficient system resources.
 
-**Resolution:** Verify the archive is not corrupted. Check the system has sufficient disk space and memory. Try extracting manually with the underlying tool (e.g., `7z`, `unar`).
+**Resolution:** Verify the archive is not corrupted. Check the system has sufficient disk space and memory. Try extracting manually with the underlying tool (e.g., `7z`, `unar`). This also occurs with partially-password protected files.
 
 ### MAX_ARCHIVE_SIZE_BYTES
 
@@ -101,3 +101,19 @@ When Archae encounters issues during operation, it logs warnings with specific c
 **Details:** The archive has a MIME type (e.g., `application/java-archive`) in the skip-delete list and is protected from automatic deletion.
 
 **Resolution:** This is informational; these file types often are not pure archives and are significant in other ways.
+
+### PASSWORD_PROTECTED_DETECTED
+
+**Cause:** Archive contains password protected contents.
+
+**Details:** The archive contains at least 1 password-protected entry; if there are unencrypted entries, they will be extracted.
+
+**Resolution:** Manually extract this archive if you know the password.
+
+### PASSWORD_PROTECTED_SKIPPED
+
+**Cause:** Archive not extracted because all entries are password protected
+
+**Details:** All entries in the archive are password protected.
+
+**Resolution:** Manually extract this archive if you know the password.

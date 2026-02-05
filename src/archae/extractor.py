@@ -125,10 +125,10 @@ class ArchiveExtractor:
         extension = file_path.suffix.lstrip(".").lower()
         self.file_tracker.add_metadata(base_hash, "extension", extension)
 
-    def _get_uncompressed_size(
+    def _get_archive_metadata(
         self, file_path: Path, archiver: BaseArchiver
-    ) -> int | None:
-        """Retrieve the uncompressed size of an archive.
+    ) -> dict | None:
+        """Retrieve metadata about an archive, including encrypted file counts and exploded size.
 
         Args:
             base_hash (str): The SHA-256 hash of the file.
@@ -136,10 +136,10 @@ class ArchiveExtractor:
             archiver (BaseArchiver): The archiver to use for size retrieval.
 
         Returns:
-            int | None: The uncompressed size in bytes, or None if retrieval failed.
+            idictnt | None: Metadata about the archive, or None if retrieval failed.
         """
         try:
-            return archiver.get_archive_uncompressed_size(file_path)
+            return archiver.analyze_archive(file_path)
         except NotImplementedError:
             logger.warning(
                 "%s: No archiver supports analysis for %s; extraction will continue",
@@ -185,27 +185,57 @@ class ArchiveExtractor:
             return
 
         # Retrieve archive size and calculate compression ratio
-        extracted_size = self._get_uncompressed_size(file_path, archiver)
-        if extracted_size is None:
-            return
+        archive_metadata = self._get_archive_metadata(file_path, archiver)
+        if archive_metadata:
+            extracted_size = archive_metadata.get("exploded_size", 0)
+            encrypted_count = archive_metadata.get("encrypted_count", 0)
+            unencrypted_count = archive_metadata.get("unencrypted_count", 0)
+            total_count = archive_metadata.get("total_count", 0)
+            encryption_status = None
+            if encrypted_count > 0:
+                if unencrypted_count == 0:
+                    encryption_status = "ALL"
+                    template = "%s: Archive %s appears to be fully password protected based on metadata analysis."
+                else:
+                    encryption_status = "PARTIAL"
+                    template = "%s: Archive %s appears to be partially password protected based on metadata analysis."
+                logger.warning(
+                    template,
+                    WarningTypes.PASSWORD_PROTECTED_DETECTED.name,
+                    file_path,
+                )
+            else:
+                encryption_status = "NONE"
 
-        self.file_tracker.add_metadata(base_hash, "extracted_size", extracted_size)
-        compression_ratio = (
-            extracted_size / self.file_tracker.get_file_size(base_hash)
-            if self.file_tracker.get_file_size(base_hash) > 0
-            else 0
-        )
-        self.file_tracker.add_metadata(
-            base_hash, "overall_compression_ratio", compression_ratio
-        )
+            self.file_tracker.add_metadata(
+                base_hash, "total_archive_count", total_count
+            )
+            self.file_tracker.add_metadata(
+                base_hash, "encrypted_count", encrypted_count
+            )
+            self.file_tracker.add_metadata(
+                base_hash, "unencrypted_count", unencrypted_count
+            )
+            self.file_tracker.add_metadata(base_hash, "extracted_size", extracted_size)
+            self.file_tracker.add_metadata(
+                base_hash, "encryption_status", encryption_status
+            )
+            compression_ratio = (
+                extracted_size / self.file_tracker.get_file_size(base_hash)
+                if self.file_tracker.get_file_size(base_hash) > 0
+                else 0
+            )
+            self.file_tracker.add_metadata(
+                base_hash, "overall_compression_ratio", compression_ratio
+            )
 
         # Check if extraction should proceed based on settings
         if not self._should_extract_archive(base_hash, file_path):
             return
 
         # Extract the archive and process contained files
-        if not self._extract_archive(archiver, file_path, base_hash):
-            return
+        extract_ok = self._extract_archive(archiver, file_path, base_hash)
+        self.file_tracker.add_metadata(base_hash, "successful_extraction", extract_ok)
 
         extraction_dir = self.extract_dir / base_hash
         child_files = self._list_child_files(extraction_dir)
@@ -225,7 +255,7 @@ class ArchiveExtractor:
             base_hash (str): The SHA-256 hash of the archive file.
 
         Returns:
-            bool: True if extraction succeeded, False otherwise.
+            bool: True if extraction succeeded without error, False otherwise.
         """
         try:
             extraction_dir = self.extract_dir / base_hash
@@ -371,6 +401,13 @@ class ArchiveExtractor:
         """Determine whether an archive should be extracted based on its metadata and current settings."""
         settings_dict = get_settings()
         metadata = self.file_tracker.get_file_metadata(file_hash)
+        if metadata.get("encryption_status") == "ALL":
+            logger.warning(
+                "%s: Skipped archive %s because it appears to be fully password protected.",
+                WarningTypes.PASSWORD_PROTECTED_SKIPPED.name,
+                file_path,
+            )
+            return False
         extracted_size = metadata.get("extracted_size", 0)
         if extracted_size > settings_dict["MAX_ARCHIVE_SIZE_BYTES"]:
             logger.warning(

@@ -7,6 +7,7 @@ import shutil
 from typing import TYPE_CHECKING, ClassVar, cast
 
 import archae.util.archiver
+from archae.util.enum.warning_types import WarningTypes
 
 if TYPE_CHECKING:
     from archae.util.archiver.base_archiver import BaseArchiver
@@ -30,7 +31,8 @@ class ToolManager:
                 cls.__tools[str(archiver_cls.archiver_name)] = archiver_cls(tool_path)  # type: ignore[abstract]
             else:
                 logger.warning(
-                    "MISSING_ARCHIVER: Could not find %s; some archive types may not be supported",
+                    "%s: Could not find %s; some archive types may not be supported",
+                    WarningTypes.MISSING_ARCHIVER.name,
                     archiver_cls.archiver_name,
                 )
 

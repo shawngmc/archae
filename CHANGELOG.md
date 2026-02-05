@@ -12,6 +12,8 @@ The **third number** is for emergencies when we need to start branches for older
 
 - Module: Make warnings use an explicit type
 - Module: WarningTypes now externally accessible
+- Module: Detect password-protected archives
+- Module: Extract non-protected entries in password-protected archives
 
 ## 2026.5
 
@@ -40,7 +42,6 @@ The **third number** is for emergencies when we need to start branches for older
 
 - Improve archive type detection
 - Separate between extractable and non-extractable archive types - started, but needs a bit more refinement
-- Detect password-protected archives
 - Allow supplying archive passwords by hash
 - Add custom magic to detect obscure archive formats
 - Add Brotli: .br / application/x-brotli

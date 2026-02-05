@@ -10,7 +10,7 @@ from pathlib import Path
 import rich_click as click
 
 from archae.config import apply_options, get_options
-from archae.extractor import ArchiveExtractor
+from archae.extractor import ArchiveExtractor, ExtractionWarning
 from archae.util.tool_manager import ToolManager
 
 logger = logging.getLogger("archae")
@@ -167,7 +167,7 @@ def print_tracked_files(tracked_files: dict[str, dict]) -> None:
             logger.info("    %s: %s", key, value)
 
 
-def print_warnings(warnings: list[str]) -> None:
+def print_warnings(warnings: list[ExtractionWarning]) -> None:
     """Print accumulated warnings for debugging purposes."""
     logger.info("------------------------------------------------")
     if len(warnings) == 0:
@@ -175,4 +175,4 @@ def print_warnings(warnings: list[str]) -> None:
         return
     logger.info("Accumulated Warnings:")
     for warning in warnings:  # type: ignore[attr-defined]
-        logger.info(warning)
+        logger.info(warning.message)

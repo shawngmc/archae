@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 import magic
 
 from archae.config import apply_options, get_default_settings, get_settings
+from archae.util.enum.warning_types import WarningTypes
 from archae.util.file_tracker import FileTracker
 from archae.util.tool_manager import ToolManager
 
@@ -20,18 +21,34 @@ if TYPE_CHECKING:
 from archae.util.lists import skip_delete_extensions, skip_delete_mimetypes
 
 
+class ExtractionWarning:
+    """Warning wrapper class for extraction issues."""
+
+    def __init__(self, message: str, warning_type: WarningTypes) -> None:
+        """Initialize the Warning.
+
+        Args:
+            message (str): The warning message.
+            warning_type (WarningTypes): The type of the warning.
+        """
+        self.message = message
+        self.warning_type = warning_type
+
+
 class WarningAccumulator(logging.Handler):
     """Logging handler to accumulate warnings while still printing them."""
 
     def __init__(self) -> None:
         """Initialize the WarningAccumulator."""
         super().__init__()
-        self.warnings: list[str] = []
+        self.warnings: list[ExtractionWarning] = []
 
     def emit(self, record: logging.LogRecord) -> None:
         """Print and accumulate warning messages."""
-        if record.levelno >= logging.WARNING:
-            self.warnings.append(self.format(record))
+        if record.levelno == logging.WARNING:
+            rendered = self.format(record)
+            warning = ExtractionWarning(rendered, WarningTypes(rendered.split(":")[0]))
+            self.warnings.append(warning)
         print(self.format(record))  # noqa: T201
 
     def clear_warnings(self) -> None:
@@ -108,10 +125,10 @@ class ArchiveExtractor:
         extension = file_path.suffix.lstrip(".").lower()
         self.file_tracker.add_metadata(base_hash, "extension", extension)
 
-    def _get_uncompressed_size(
+    def _get_archive_metadata(
         self, file_path: Path, archiver: BaseArchiver
-    ) -> int | None:
-        """Retrieve the uncompressed size of an archive.
+    ) -> dict | None:
+        """Retrieve metadata about an archive, including encrypted file counts and exploded size.
 
         Args:
             base_hash (str): The SHA-256 hash of the file.
@@ -119,18 +136,20 @@ class ArchiveExtractor:
             archiver (BaseArchiver): The archiver to use for size retrieval.
 
         Returns:
-            int | None: The uncompressed size in bytes, or None if retrieval failed.
+            idictnt | None: Metadata about the archive, or None if retrieval failed.
         """
         try:
-            return archiver.get_archive_uncompressed_size(file_path)
+            return archiver.analyze_archive(file_path)
         except NotImplementedError:
             logger.warning(
-                "SIZE_RETRIEVAL_FAILED: No archiver supports analysis for %s; extraction will continue",
+                "%s: No archiver supports analysis for %s; extraction will continue",
+                WarningTypes.SIZE_RETRIEVAL_FAILED.name,
                 file_path,
             )
         except RuntimeError as e:
             logger.warning(
-                "SIZE_RETRIEVAL_FAILED: Could not retrieve size for archive %s: %s",
+                "%s: Could not retrieve size for archive %s: %s",
+                WarningTypes.SIZE_RETRIEVAL_FAILED.name,
                 file_path,
                 str(e),
             )
@@ -149,7 +168,9 @@ class ArchiveExtractor:
         # Check if we've reached maximum depth
         if settings_dict["MAX_DEPTH"] != 0 and depth >= settings_dict["MAX_DEPTH"]:
             logger.warning(
-                "MAX_DEPTH: File %s is not extracted; max depth reached.", file_path
+                "%s: File %s is not extracted; max depth reached.",
+                WarningTypes.MAX_DEPTH.name,
+                file_path,
             )
             return
 
@@ -157,33 +178,64 @@ class ArchiveExtractor:
         archiver = self._get_archiver_for_file(base_hash)
         if not archiver:
             logger.warning(
-                "NO_ARCHIVER: No suitable archiver found for file: %s",
+                "%s: No suitable archiver found for file: %s",
+                WarningTypes.NO_ARCHIVER.name,
                 file_path,
             )
             return
 
         # Retrieve archive size and calculate compression ratio
-        extracted_size = self._get_uncompressed_size(file_path, archiver)
-        if extracted_size is None:
-            return
+        archive_metadata = self._get_archive_metadata(file_path, archiver)
+        if archive_metadata:
+            extracted_size = archive_metadata.get("exploded_size", 0)
+            encrypted_count = archive_metadata.get("encrypted_count", 0)
+            unencrypted_count = archive_metadata.get("unencrypted_count", 0)
+            total_count = archive_metadata.get("total_count", 0)
+            encryption_status = None
+            if encrypted_count > 0:
+                if unencrypted_count == 0:
+                    encryption_status = "ALL"
+                    template = "%s: Archive %s appears to be fully password protected based on metadata analysis."
+                else:
+                    encryption_status = "PARTIAL"
+                    template = "%s: Archive %s appears to be partially password protected based on metadata analysis."
+                logger.warning(
+                    template,
+                    WarningTypes.PASSWORD_PROTECTED_DETECTED.name,
+                    file_path,
+                )
+            else:
+                encryption_status = "NONE"
 
-        self.file_tracker.add_metadata(base_hash, "extracted_size", extracted_size)
-        compression_ratio = (
-            extracted_size / self.file_tracker.get_file_size(base_hash)
-            if self.file_tracker.get_file_size(base_hash) > 0
-            else 0
-        )
-        self.file_tracker.add_metadata(
-            base_hash, "overall_compression_ratio", compression_ratio
-        )
+            self.file_tracker.add_metadata(
+                base_hash, "total_archive_count", total_count
+            )
+            self.file_tracker.add_metadata(
+                base_hash, "encrypted_count", encrypted_count
+            )
+            self.file_tracker.add_metadata(
+                base_hash, "unencrypted_count", unencrypted_count
+            )
+            self.file_tracker.add_metadata(base_hash, "extracted_size", extracted_size)
+            self.file_tracker.add_metadata(
+                base_hash, "encryption_status", encryption_status
+            )
+            compression_ratio = (
+                extracted_size / self.file_tracker.get_file_size(base_hash)
+                if self.file_tracker.get_file_size(base_hash) > 0
+                else 0
+            )
+            self.file_tracker.add_metadata(
+                base_hash, "overall_compression_ratio", compression_ratio
+            )
 
         # Check if extraction should proceed based on settings
         if not self._should_extract_archive(base_hash, file_path):
             return
 
         # Extract the archive and process contained files
-        if not self._extract_archive(archiver, file_path, base_hash):
-            return
+        extract_ok = self._extract_archive(archiver, file_path, base_hash)
+        self.file_tracker.add_metadata(base_hash, "successful_extraction", extract_ok)
 
         extraction_dir = self.extract_dir / base_hash
         child_files = self._list_child_files(extraction_dir)
@@ -203,7 +255,7 @@ class ArchiveExtractor:
             base_hash (str): The SHA-256 hash of the archive file.
 
         Returns:
-            bool: True if extraction succeeded, False otherwise.
+            bool: True if extraction succeeded without error, False otherwise.
         """
         try:
             extraction_dir = self.extract_dir / base_hash
@@ -215,7 +267,8 @@ class ArchiveExtractor:
             archiver.extract_archive(file_path, extraction_dir)
         except RuntimeError as e:
             logger.warning(
-                "EXTRACTION_FAILED: Extraction failed for archive %s: %s",
+                "%s: Extraction failed for archive %s: %s",
+                WarningTypes.EXTRACTION_FAILED.name,
                 file_path,
                 str(e),
             )
@@ -240,7 +293,8 @@ class ArchiveExtractor:
                 )
             except (PermissionError, OSError) as e:
                 logger.warning(
-                    "DELETE_FAILED: Could not delete archive %s after extraction: %s",
+                    "%s: Could not delete archive %s after extraction: %s",
+                    WarningTypes.DELETE_FAILED.name,
                     file_path,
                     str(e),
                 )
@@ -320,7 +374,7 @@ class ArchiveExtractor:
         """Print the tracked files for debugging purposes."""
         return self.file_tracker.get_tracked_files()
 
-    def get_warnings(self) -> list[str]:
+    def get_warnings(self) -> list[ExtractionWarning]:
         """Print accumulated warnings for debugging purposes."""
         return accumulator.warnings
 
@@ -347,10 +401,18 @@ class ArchiveExtractor:
         """Determine whether an archive should be extracted based on its metadata and current settings."""
         settings_dict = get_settings()
         metadata = self.file_tracker.get_file_metadata(file_hash)
+        if metadata.get("encryption_status") == "ALL":
+            logger.warning(
+                "%s: Skipped archive %s because it appears to be fully password protected.",
+                WarningTypes.PASSWORD_PROTECTED_SKIPPED.name,
+                file_path,
+            )
+            return False
         extracted_size = metadata.get("extracted_size", 0)
         if extracted_size > settings_dict["MAX_ARCHIVE_SIZE_BYTES"]:
             logger.warning(
-                "MAX_ARCHIVE_SIZE_BYTES: Skipped archive %s because expected size %s is greater than MAX_ARCHIVE_SIZE_BYTES %s",
+                "%s: Skipped archive %s because expected size %s is greater than MAX_ARCHIVE_SIZE_BYTES %s",
+                WarningTypes.MAX_ARCHIVE_SIZE_BYTES.name,
                 file_path,
                 extracted_size,
                 settings_dict["MAX_ARCHIVE_SIZE_BYTES"],
@@ -360,7 +422,8 @@ class ArchiveExtractor:
         total_extracted = self.file_tracker.get_total_tracked_file_size()
         if total_extracted + extracted_size > settings_dict["MAX_TOTAL_SIZE_BYTES"]:
             logger.warning(
-                "MAX_TOTAL_SIZE_BYTES: Skipped archive %s because expected size %s + current tracked files %s is greater than MAX_TOTAL_SIZE_BYTES %s",
+                "%s: Skipped archive %s because expected size %s + current tracked files %s is greater than MAX_TOTAL_SIZE_BYTES %s",
+                WarningTypes.MAX_TOTAL_SIZE_BYTES.name,
                 file_path,
                 extracted_size,
                 total_extracted,
@@ -370,7 +433,8 @@ class ArchiveExtractor:
         compression_ratio = metadata.get("overall_compression_ratio", 0)
         if compression_ratio < settings_dict["MIN_ARCHIVE_RATIO"]:
             logger.warning(
-                "MIN_ARCHIVE_RATIO: Skipped archive %s because compression ratio %.5f is less than MIN_ARCHIVE_RATIO %s",
+                "%s: Skipped archive %s because compression ratio %.5f is less than MIN_ARCHIVE_RATIO %s",
+                WarningTypes.MIN_ARCHIVE_RATIO.name,
                 file_path,
                 compression_ratio,
                 settings_dict["MIN_ARCHIVE_RATIO"],
@@ -381,7 +445,8 @@ class ArchiveExtractor:
             < settings_dict["MIN_DISK_FREE_SPACE"]
         ):
             logger.warning(
-                "MIN_DISK_FREE_SPACE: Skipped archive %s because extracting it would leave less than MIN_DISK_FREE_SPACE %s bytes free at extraction location %s",
+                "%s: Skipped archive %s because extracting it would leave less than MIN_DISK_FREE_SPACE %s bytes free at extraction location %s",
+                WarningTypes.MIN_DISK_FREE_SPACE.name,
                 file_path,
                 settings_dict["MIN_DISK_FREE_SPACE"],
                 self.extract_dir,
@@ -399,7 +464,8 @@ class ArchiveExtractor:
         extension = metadata.get("extension", "").lower()
         if extension in skip_delete_extensions:
             logger.warning(
-                "SKIP_DELETE_EXTENSION: Archive %s not deleted after extraction due to its extension '%s' being in the skip list.",
+                "%s: Archive %s not deleted after extraction due to its extension '%s' being in the skip list.",
+                WarningTypes.SKIP_DELETE_EXTENSION.name,
                 file_path,
                 extension,
             )
@@ -408,7 +474,8 @@ class ArchiveExtractor:
         mime_type = metadata.get("type_mime", "").lower()
         if mime_type in skip_delete_mimetypes:
             logger.warning(
-                "SKIP_DELETE_MIMETYPE: Archive %s not deleted after extraction due to its mime type '%s' being in the skip list.",
+                "%s: Archive %s not deleted after extraction due to its mime type '%s' being in the skip list.",
+                WarningTypes.SKIP_DELETE_MIMETYPE.name,
                 file_path,
                 mime_type,
             )

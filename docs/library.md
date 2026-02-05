@@ -240,7 +240,7 @@ warnings = extractor.get_warnings()
 if warnings:
     print("Processing completed with warnings:")
     for warning in warnings:
-        print(f"  - {warning}")
+        print(f" {warning.warning_type} - {warning.message}")
 ```
 
 ## Notes

@@ -29,6 +29,7 @@ Every once and a while, I run into an issue: multiple layers of archives. The re
 - No substantial limit on the number of archive layers
 - Identifies file types via libmagic
 - Detects duplicate archives
+- Can detect password-protected archives and extract any unprotected entries
 - Basic archive bomb protections
     - MAX_ARCHIVE_SIZE_BYTES - ensures the uncompressed size of an archive is limited
     - MAX_TOTAL_SIZE_BYTES - ensures the total extracted footprint isn't above a certain size

@@ -8,6 +8,11 @@ The **first number** of the version is the year.
 The **second number** is incremented with each release, starting at 1 for each year.
 The **third number** is for emergencies when we need to start branches for older releases.
 
+## 2026.6
+
+- Module: Make warnings use an explicit type
+- Module: WarningTypes now externally accessible
+
 ## 2026.5
 
 - Module: Add convenience function to get options list
@@ -33,7 +38,6 @@ The **third number** is for emergencies when we need to start branches for older
 
 ## TODOs
 
-- Programmatic list of warning prefixes
 - Improve archive type detection
 - Separate between extractable and non-extractable archive types - started, but needs a bit more refinement
 - Detect password-protected archives

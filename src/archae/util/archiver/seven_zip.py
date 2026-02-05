@@ -175,6 +175,8 @@ class SevenZipArchiver(BaseArchiver):
             "x",
             str(archive_path),
             f"-o{extract_dir!s}",
+            "-p",
+            "-y",
         ]
         try:
             subprocess.run(command, check=True, capture_output=True, text=True)  # noqa: S603
@@ -211,3 +213,49 @@ class SevenZipArchiver(BaseArchiver):
                 exploded_size += int(line[7:])
 
         return exploded_size
+
+    def analyze_archive(self, archive_path: Path) -> dict:
+        """Get various metadata about the archive, including number of encrypted files.
+
+        Args:
+            archive_path (Path): The path to the archive file.
+
+        Returns:
+            int: The number of encrypted files in the archive
+        """
+        command: list[str] = [
+            str(self.executable_path),
+            "l",
+            "-slt",
+            str(archive_path),
+            "-p",
+            "-y",
+        ]
+        try:
+            result = subprocess.run(command, check=True, capture_output=True, text=True)  # noqa: S603
+        except subprocess.CalledProcessError as e:
+            msg = (
+                f"7zip size retrieval failed for archive {archive_path} "
+                f"with exit code {e.returncode}: {e.stderr}"
+            )
+            raise RuntimeError(msg) from e
+
+        result_lines = str(result.stdout).splitlines()
+        exploded_size = 0
+        encrypted_count = 0
+        unencrypted_count = 0
+        for line in result_lines:
+            if line.startswith("Size = "):
+                exploded_size += int(line[7:])
+            if line.startswith("Encrypted = "):
+                if line[12:].strip() == "+":
+                    encrypted_count += 1
+                else:
+                    unencrypted_count += 1
+
+        return {
+            "encrypted_count": encrypted_count,
+            "unencrypted_count": unencrypted_count,
+            "total_count": encrypted_count + unencrypted_count,
+            "exploded_size": exploded_size,
+        }

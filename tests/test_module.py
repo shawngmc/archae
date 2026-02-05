@@ -2,6 +2,7 @@ import shutil
 from pathlib import Path
 
 from archae.extractor import ArchiveExtractor
+from archae.util.enum.warning_types import WarningTypes
 
 
 def test_run_as_module() -> None:
@@ -20,7 +21,7 @@ def test_module_max_depth_warn() -> None:
     extractor.apply_options({"MAX_DEPTH": 2})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
-    assert any("MAX_DEPTH:" in warning for warning in warnings)
+    assert any(WarningTypes.MAX_DEPTH == warning.warning_type for warning in warnings)
 
 
 def test_module_max_depth_ok() -> None:
@@ -32,7 +33,9 @@ def test_module_max_depth_ok() -> None:
     extractor.apply_options({"MAX_DEPTH": 5})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
-    assert not any("MAX_DEPTH:" in warning for warning in warnings)
+    assert not any(
+        WarningTypes.MAX_DEPTH == warning.warning_type for warning in warnings
+    )
 
 
 def test_total_bytes_warn() -> None:
@@ -44,7 +47,10 @@ def test_total_bytes_warn() -> None:
     extractor.apply_options({"MAX_TOTAL_SIZE_BYTES": 100})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
-    assert any("MAX_TOTAL_SIZE_BYTES:" in warning for warning in warnings)
+    assert any(
+        WarningTypes.MAX_TOTAL_SIZE_BYTES == warning.warning_type
+        for warning in warnings
+    )
 
 
 def test_total_bytes_ok() -> None:
@@ -56,7 +62,10 @@ def test_total_bytes_ok() -> None:
     extractor.apply_options({"MAX_TOTAL_SIZE_BYTES": "10G"})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
-    assert not any("MAX_TOTAL_SIZE_BYTES:" in warning for warning in warnings)
+    assert not any(
+        WarningTypes.MAX_TOTAL_SIZE_BYTES == warning.warning_type
+        for warning in warnings
+    )
 
 
 def test_compression_ratio_warn() -> None:
@@ -70,7 +79,9 @@ def test_compression_ratio_warn() -> None:
     extractor.apply_options({"MIN_ARCHIVE_RATIO": 0.999})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
-    assert any("MIN_ARCHIVE_RATIO:" in warning for warning in warnings)
+    assert any(
+        WarningTypes.MIN_ARCHIVE_RATIO == warning.warning_type for warning in warnings
+    )
 
 
 def test_compression_ratio_ok() -> None:
@@ -82,7 +93,9 @@ def test_compression_ratio_ok() -> None:
     extractor.apply_options({"MIN_ARCHIVE_RATIO": 0.001})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
-    assert not any("MIN_ARCHIVE_RATIO:" in warning for warning in warnings)
+    assert not any(
+        WarningTypes.MIN_ARCHIVE_RATIO == warning.warning_type for warning in warnings
+    )
 
 
 def test_uncompressed_max_warn() -> None:
@@ -94,7 +107,10 @@ def test_uncompressed_max_warn() -> None:
     extractor.apply_options({"MAX_ARCHIVE_SIZE_BYTES": 10})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
-    assert any("MAX_ARCHIVE_SIZE_BYTES:" in warning for warning in warnings)
+    assert any(
+        WarningTypes.MAX_ARCHIVE_SIZE_BYTES == warning.warning_type
+        for warning in warnings
+    )
 
 
 def test_uncompressed_max_ok() -> None:
@@ -106,7 +122,10 @@ def test_uncompressed_max_ok() -> None:
     extractor.apply_options({"MAX_ARCHIVE_SIZE_BYTES": "10G"})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
-    assert not any("MAX_ARCHIVE_SIZE_BYTES:" in warning for warning in warnings)
+    assert not any(
+        WarningTypes.MAX_ARCHIVE_SIZE_BYTES == warning.warning_type
+        for warning in warnings
+    )
 
 
 def test_disk_free_warn() -> None:
@@ -116,7 +135,9 @@ def test_disk_free_warn() -> None:
     extractor.apply_options({"MIN_DISK_FREE_SPACE": "10P"})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
-    assert any("MIN_DISK_FREE_SPACE:" in warning for warning in warnings)
+    assert any(
+        WarningTypes.MIN_DISK_FREE_SPACE == warning.warning_type for warning in warnings
+    )
 
 
 def test_disk_free_ok() -> None:
@@ -126,7 +147,9 @@ def test_disk_free_ok() -> None:
     extractor.apply_options({"MIN_DISK_FREE_SPACE": 10})
     extractor.handle_file(Path(__file__).resolve().parent / "samples" / "sample1.zip")
     warnings = extractor.get_warnings()
-    assert not any("MIN_DISK_FREE_SPACE:" in warning for warning in warnings)
+    assert not any(
+        WarningTypes.MIN_DISK_FREE_SPACE == warning.warning_type for warning in warnings
+    )
 
 
 def test_delete() -> None:

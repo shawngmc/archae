@@ -13,6 +13,7 @@ maxdepth: 2
 installation
 usage
 library
+warnings
 ```
 
 ## CLI Reference

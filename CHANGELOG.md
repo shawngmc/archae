@@ -8,6 +8,10 @@ The **first number** of the version is the year.
 The **second number** is incremented with each release, starting at 1 for each year.
 The **third number** is for emergencies when we need to start branches for older releases.
 
+## 2026.6
+
+- Module: Make warnings use an explicit type
+
 ## 2026.5
 
 - Module: Add convenience function to get options list

@@ -184,9 +184,8 @@ When using Archae as a library, use the `apply_options()` method:
 from archae import ArchiveExtractor
 
 extractor = ArchiveExtractor()
-extractor.apply_options({
-    "MAX_ARCHIVE_SIZE_BYTES": 5000000000,
-    "MIN_ARCHIVE_RATIO": 0.01
-})
+extractor.apply_options(
+    {"MAX_ARCHIVE_SIZE_BYTES": 5000000000, "MIN_ARCHIVE_RATIO": 0.01}
+)
 extractor.handle_file(Path("archive.zip"))
 ```

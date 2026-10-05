@@ -126,10 +126,9 @@ Apply a dict of settings options.
 **Example:**
 
 ```python
-extractor.apply_options([
-    ("MAX_ARCHIVE_SIZE_BYTES", "5000000000"),
-    ("MIN_ARCHIVE_RATIO", "0.01")
-])
+extractor.apply_options(
+    [("MAX_ARCHIVE_SIZE_BYTES", "5000000000"), ("MIN_ARCHIVE_RATIO", "0.01")]
+)
 ```
 
 ## Configuration
@@ -183,11 +182,7 @@ extractor.handle_file(Path("complex_archive.tar.gz"))
 tracked = extractor.get_tracked_files()
 
 # Find all archives
-archives = [
-    (hash_, meta)
-    for hash_, meta in tracked.items()
-    if meta.get("is_archive")
-]
+archives = [(hash_, meta) for hash_, meta in tracked.items() if meta.get("is_archive")]
 
 print(f"Found {len(archives)} nested archives")
 
